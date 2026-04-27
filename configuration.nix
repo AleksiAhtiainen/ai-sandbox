@@ -138,9 +138,12 @@ fileSystems."/mnt/share" = {
   fsType = "9p";
   options = [
     "trans=virtio"
-    "msize=104857600"
-    "uid=1000"
-    "gid=100"
+    "rw"
+    "noauto"
+    "x-systemd.automount"
+#    "msize=104857600"
+#    "uid=1000"
+#    "gid=100"
   ];
 };
 
