@@ -133,6 +133,17 @@ X-GNOME-Autostart-enabled=true
 Name=SPICE Agent
 '';
 
+fileSystems."/mnt/share" = {
+  device = "share";
+  fsType = "9p";
+  options = [
+    "trans=virtio"
+    "msize=104857600"
+    "uid=1000"
+    "gid=100"
+  ];
+};
+
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
   # programs.mtr.enable = true;
