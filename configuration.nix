@@ -49,7 +49,7 @@
   services.xserver.displayManager.gdm.enable = true;
   services.xserver.desktopManager.gnome.enable = true;
   
-  services.xserver.displayManager.gdm.wayland = false;
+  # services.xserver.displayManager.gdm.wayland = false;
 
   # Configure keymap in X11
   services.xserver.xkb = {
@@ -111,6 +111,27 @@
   #  vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
   #  wget
   ];
+
+#  systemd.user.services.spice-vdagent = {
+#    description = "SPICE user agent";
+#  #  wantedBy = [ "graphical-session.target" ];
+#    wantedBy = [ "default.target" ];
+#
+#    serviceConfig = {
+#      ExecStart = "${pkgs.spice-vdagent}/bin/spice-vdagent";
+#      Restart = "on-failure";
+#    };
+#  };
+
+environment.etc."xdg/autostart/spice-vdagent.desktop".text = ''
+[Desktop Entry]
+Type=Application
+Exec=${pkgs.spice-vdagent}/bin/spice-vdagent
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+Name=SPICE Agent
+'';
 
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
