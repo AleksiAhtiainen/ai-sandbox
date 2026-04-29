@@ -3,13 +3,14 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+    claude-pkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     nixos-generators = {
       url = "github:nix-community/nixos-generators";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
-  outputs = { self, nixpkgs, nixos-generators }:
+  outputs = { self, nixpkgs, claude-pkgs, nixos-generators }:
     let
       systems = [ "aarch64-linux" "x86_64-linux" ];
       forAllSystems = nixpkgs.lib.genAttrs systems;
@@ -22,13 +23,21 @@
         ./modules/user.nix
         ./modules/firstboot.nix
         ./modules/vm.nix
+        ./modules/claude.nix
       ];
 
-      specialArgs = { flakeSelf = self; };
+      mkSpecialArgs = system: {
+        flakeSelf = self;
+        claudePkgs = import claude-pkgs {
+          inherit system;
+          config.allowUnfree = true;
+        };
+      };
     in {
       packages = forAllSystems (system: {
         image = nixos-generators.nixosGenerate {
-          inherit system specialArgs;
+          inherit system;
+          specialArgs = mkSpecialArgs system;
           format = "qcow-efi";
           modules = commonModules;
         };
@@ -38,7 +47,8 @@
         (name:
           let system = nixpkgs.lib.removePrefix "sandbox-" name; in
           nixpkgs.lib.nixosSystem {
-            inherit system specialArgs;
+            inherit system;
+            specialArgs = mkSpecialArgs system;
             modules = commonModules;
           });
     };

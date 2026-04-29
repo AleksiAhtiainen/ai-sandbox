@@ -79,6 +79,68 @@ mount | grep share
 # /mnt/share on fuse.bindfs (layered on top)
 ```
 
+## Updating the configuration after first boot
+
+Inside the VM, the build-time flake source is at `/etc/nixos` (read-only,
+in the Nix store). For changes, keep a writable copy of this repo on the
+host's share directory and rebuild from `/mnt/share` inside the VM:
+
+```sh
+# On the host, once:
+mv /path/to/your/koski-nixos-sandbox-config ~/koski-share/
+
+# In the VM, after every edit:
+sudo nixos-rebuild switch \
+  --flake /mnt/share/koski-nixos-sandbox-config#sandbox-$(uname -m)-linux \
+  --impure
+```
+
+This way you edit on the host with your normal tools, and the VM rebuilds
+from the same files via 9p + bindfs.
+
+## Claude Code
+
+The VM ships with [Claude Code](https://docs.claude.com/en/docs/claude-code)
+preinstalled (`claude` on `PATH`) and an `update-claude` command for pulling
+the latest release on demand.
+
+### Where Claude state lives
+
+`~/.claude/` is a symlink to `/mnt/share/claude/<username>/`. Any
+state Claude Code writes — settings, memories, MCP config, OAuth login,
+project history, todos — survives `nixos-rebuild`, VM shutdown, and
+recreating the VM from the seed image, as long as you keep using the same
+`~/koski-share`. If a previous version of this VM had a real `~/.claude`
+directory, it is migrated onto the share once on the next boot and replaced
+with the symlink.
+
+Note: This does not keep multiple VMs using same username sandboxed from each
+other, only from the HOST. E.g. a pormpt-injection compromise in one VM could
+plant a hook in the common settings that another VM ends up using. This is also
+why `~/.claude/` is **not** a symlink to your host's own
+`~/.claude/`: the VM is supposed to be a sandbox, so the host's own
+credentials, hooks, and history stay outside the VM's reach.
+
+### Be careful running multiple VMs as the same user simultaneously
+
+The 9p file sharing has no lock manager and uses `cache=loose`. Two VMs
+writing to the same `/mnt/share/claude/<user>/` give last-writer-wins on
+every file, with stale-cache reads on top.
+
+### Updating Claude Code
+
+`claude-code` is pinned via a dedicated `claude-pkgs` flake input that
+tracks `nixos-unstable`, separately from the rest of the system (which
+stays on `nixos-25.11`). To pull the newest release:
+
+```sh
+update-claude
+```
+
+This runs `nix flake update claude-pkgs` against
+`/mnt/share/koski-nixos-sandbox-config` and rebuilds. To bump everything
+else, use the whole-system rebuild command in the section above.
+
 ## Maintainer setup (building the seed)
 
 This is the one-time bootstrap. Run inside any NixOS environment matching
@@ -100,23 +162,16 @@ For x86_64 the same command on an Intel-Linux NixOS environment, with
 `packages.x86_64-linux.image`.
 
 Distribute the resulting qcow2 to the team via shared storage. CI builds
-+ Releases are out of scope for now (planned follow-up).
+are out of scope for now (planned follow-up).
 
-## Updating the configuration after first boot
+## (Possible) TODOs
 
-Inside the VM, the build-time flake source is at `/etc/nixos` (read-only,
-in the Nix store). To make changes:
-
-```sh
-# Clone a writable copy
-git clone <repo-url> ~/koski-nixos-sandbox-config
-cd ~/koski-nixos-sandbox-config
-
-# Edit, then rebuild
-sudo nixos-rebuild switch --flake .#sandbox-$(uname -m)-linux --impure
-```
-
-(Replace `sandbox-aarch64-linux` / `sandbox-x86_64-linux` as appropriate.)
+- git config (name, email, settings etc.)
+- GitHub Actions matrix building qcow2 for both arches and uploading to Releases (replaces
+the manual seed handoff).
+- Bootstrap path for users who don't yet have any NixOS VM and need to build a seed from
+scratch on macOS (would bring back something like nix-darwin linux-builder, or a temporary
+Lima/Tart VM, or CI).
 
 ## Troubleshooting
 
