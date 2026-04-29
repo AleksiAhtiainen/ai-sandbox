@@ -7,18 +7,12 @@ let
     else default;
 
   username = readOr "/etc/koski-sandbox-username" "sandbox";
-  hostUid = lib.toInt (readOr "/etc/koski-sandbox-uid" "1000");
-  hostGid = lib.toInt (readOr "/etc/koski-sandbox-gid" "100");
 in
 {
-  users.groups.${username} = {
-    gid = hostGid;
-  };
-
   users.users.${username} = {
     isNormalUser = true;
-    uid = hostUid;
-    group = username;
+    uid = 1000;
+    group = "users";
     description = username;
     extraGroups = [ "networkmanager" "wheel" ];
     initialPassword = "changeme";

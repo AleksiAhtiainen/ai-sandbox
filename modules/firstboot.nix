@@ -19,13 +19,8 @@ let
         exit 1
       fi
 
-      host_uid=$(stat -c '%u' /mnt/share)
-      host_gid=$(stat -c '%g' /mnt/share)
-
-      printf '%s' "$u"        > /etc/koski-sandbox-username
-      printf '%s' "$host_uid" > /etc/koski-sandbox-uid
-      printf '%s' "$host_gid" > /etc/koski-sandbox-gid
-      chmod 0644 /etc/koski-sandbox-username /etc/koski-sandbox-uid /etc/koski-sandbox-gid
+      printf '%s' "$u" > /etc/koski-sandbox-username
+      chmod 0644 /etc/koski-sandbox-username
 
       arch=$(uname -m)
       case "$arch" in
@@ -41,7 +36,7 @@ let
 in
 {
   systemd.services.koski-firstboot = {
-    description = "Personalize VM with host username and uid/gid on first boot";
+    description = "Personalize VM with host username on first boot";
     after = [ "mnt-share.mount" "network-online.target" ];
     wants = [ "mnt-share.mount" "network-online.target" ];
     wantedBy = [ "multi-user.target" ];
