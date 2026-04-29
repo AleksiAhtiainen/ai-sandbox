@@ -28,6 +28,8 @@
 
   boot.growPartition = lib.mkDefault true;
 
+  virtualisation.diskSize = 128 * 1024;
+
   boot.loader.grub = {
     enable = lib.mkDefault true;
     efiSupport = lib.mkDefault true;
