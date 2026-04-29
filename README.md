@@ -164,9 +164,49 @@ For x86_64 the same command on an Intel-Linux NixOS environment, with
 Distribute the resulting qcow2 to the team via shared storage. CI builds
 are out of scope for now (planned follow-up).
 
+## Git config
+
+Drop a `.gitconfig` on the share to give git an identity inside the VM:
+
+```sh
+# On the host:
+cat > ~/koski-share/.gitconfig <<'EOF'
+[user]
+  name = Your Name
+  email = you@example.com
+EOF
+```
+
+On the next boot (or after `sudo systemctl restart koski-git-bootstrap`),
+`~/.gitconfig` inside the VM becomes a symlink to `/mnt/share/.gitconfig`.
+Edits on either side are visible to the other, so `git config --global ...`
+inside the VM writes back to the share. If `~/.gitconfig` already exists as a
+real file, it is moved to `~/.gitconfig.bak.<timestamp>` before the symlink
+replaces it.
+
+**Don't symlink your host's real `~/.gitconfig` into `~/koski-share/`.** Use a
+VM-specific copy. The host config typically references things that don't make
+sense in the sandbox (signing key paths, `gpg.program`, credential helpers,
+`includeIf` paths, custom diff/merge tools), and sharing it weakens the
+isolation the VM is meant to provide. A minimal `[user]` block is usually
+enough — add VM-only aliases and tooling on top as needed.
+
+### Signed commits and pushing to GitHub
+
+For now, **do signing and pushing to GitHub on the host**, not inside the VM.
+Keep the working tree on `~/koski-share/` (so the VM and host see the same
+checkout via `/mnt/share`), do unsigned commits inside the VM if you like,
+and when you're ready to publish, sign-and-push from the host where your
+1Password SSH agent / signing key already lives. Don't have both sides
+touching the same `.git/` at the same time — 9p has no lock manager and uses
+`cache=loose`, so concurrent writers will corrupt refs and the index.
+
 ## (Possible) TODOs
 
-- git config (name, email, settings etc.)
+- Figure out the recommended way to create signed commits and push to GitHub
+  from inside the VM (e.g. forwarding the host's 1Password SSH agent over a
+  vsock/TCP bridge, or a per-VM signing key registered with GitHub). Until
+  then, sign and push from the host as described above.
 - GitHub Actions matrix building qcow2 for both arches and uploading to Releases (replaces
 the manual seed handoff).
 - Bootstrap path for users who don't yet have any NixOS VM and need to build a seed from

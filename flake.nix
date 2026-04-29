@@ -24,6 +24,7 @@
         ./modules/firstboot.nix
         ./modules/vm.nix
         ./modules/claude.nix
+        ./modules/git.nix
       ];
 
       mkSpecialArgs = system: {
