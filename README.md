@@ -223,15 +223,104 @@ enough — add VM-only aliases and tooling on top as needed.
 ### Signed commits and pushing to GitHub
 
 For now, **do signing and pushing to GitHub on the host**, not inside the VM.
-Keep the working tree on `~/koski-share/` (so the VM and host see the same
-checkout via `/mnt/share`), do unsigned commits inside the VM if you like,
-and when you're ready to publish, sign-and-push from the host where your
-1Password SSH agent / signing key already lives. Don't have both sides
-touching the same `.git/` at the same time — 9p has no lock manager and uses
-`cache=loose`, so concurrent writers will corrupt refs and the index.
+The VM has no GitHub credentials and no signing key, and shouldn't need any.
+The recommended layout uses two clones so that no `.git/` ever has more than
+one writer at a time:
+
+- **Working clone on the share** — `~/koski-share/myproject`, which the VM
+  sees as `/mnt/share/myproject`. The VM owns this clone: editing,
+  `git add`, `git commit`, branching all happen inside the VM. Unsigned
+  commits are fine.
+- **Publishing clone off the share** — a separate host-only clone (e.g.
+  `~/work/myproject`) with the GitHub remote, signing config, and the
+  1Password SSH agent already wired up. Add the share clone as a remote:
+  ```sh
+  cd ~/work/myproject
+  git remote add vm ~/koski-share/myproject
+  git config remote.vm.fetch '+refs/heads/*:refs/remotes/vm/*'
+  ```
+
+#### Publishing (VM → host → GitHub)
+
+1. In the VM, finish your commits in `/mnt/share/myproject` and let any
+   in-flight `git` complete.
+2. On the host:
+   ```sh
+   cd ~/work/myproject
+   git fetch vm
+   git checkout -B feature vm/feature
+   # re-sign each commit on top of origin/main:
+   git rebase --exec 'git commit --amend --no-edit -S' origin/main
+   git push origin feature
+   ```
+
+The host only does `git fetch vm`, which is read-only against the share
+clone's `.git/`. Mid-VM-commit reads at worst see a stale ref (git updates
+refs last and atomically), never corruption — so this is safe even with the
+VM running and idle.
+
+#### Reverse direction (GitHub → VM)
+
+This is the asymmetric case: pulling new `origin` commits into the VM means
+*writing* to the share clone's `.git/`, which is exactly where the
+`cache=loose` races live. Two safe options:
+
+- **Stop-the-world**: shut the VM down, run
+  `git -C ~/koski-share/myproject pull --rebase` on the host, restart the VM.
+- **Bundle handoff**: on the host,
+  `git -C ~/work/myproject bundle create /tmp/x.bundle origin/main`, drop
+  the bundle into `~/koski-share/myproject/`, then inside the VM
+  `git fetch /mnt/share/x.bundle main:origin/main`. The bundle is just a
+  regular file write — no concurrent `.git/` writers.
+
+#### Footgun
+
+Don't `git push vm …` from the host casually — that is a host write into
+the share clone's `.git/` and brings back the concurrent-writer problem.
+Keep the `vm` remote fetch-only; reach for the bundle (or VM shutdown)
+when you genuinely need to seed the VM with new commits.
+
+### Running multiple VMs concurrently
+
+If you run more than one sandbox VM in parallel and want them to do git work
+independently, **give each VM its own host share directory**
+(`~/koski-share-vm1/`, `~/koski-share-vm2/`, …) and its own clone of the
+repo. UTM/virt-manager just point each VM's filesystem device at a different
+host path; the share *name* stays `share` and no VM image change is needed.
+The publishing clone on the host adds each VM as a separate remote:
+
+```sh
+cd ~/work/myproject
+git remote add vm1 ~/koski-share-vm1/myproject
+git remote add vm2 ~/koski-share-vm2/myproject
+```
+
+Each VM then has its own writer-isolated `.git/`. The publishing clone
+funnels everything to GitHub, and cross-VM transfers go through the host
+(bundle into the receiving VM's share). Per-VM shares also defuse the
+"running multiple VMs as the same user simultaneously" caveat above:
+`/mnt/share/claude/<user>/` resolves to a different host directory per VM,
+so there are no shared writers there either.
+
+Git worktrees do *not* help across VMs: all worktrees of a repo share one
+`.git/`, so multiple VMs writing through worktrees would land on the same
+`.git/objects/` and `.git/refs/` and hit the same `cache=loose` race.
+Worktrees are still fine *inside* a single VM.
 
 ## (Possible) TODOs
 
+- Switch the host-share filesystem from 9p (`cache=loose`) to virtiofs with
+  POSIX locks passed through, so that the host and one or more VMs can share
+  `~/koski-share/` with proper coherence and `flock`/`fcntl` working across
+  clients. This would significantly relax the "one writer per `.git/`" rule
+  the git workflow above is built around (especially the awkward GitHub → VM
+  direction), and let `cache=loose` go away. UTM and virt-manager both
+  support virtiofs; the guest-side change is in `modules/share.nix`
+  (`fsType = "virtiofs"` plus appropriate cache/lock options on the
+  virtiofsd side). Note that even on a fully coherent share, git's own
+  concurrency model (lock files, packed-refs rewrites) still favors a single
+  writer per repo, so the share-fs upgrade simplifies the workflow but
+  doesn't make "many VMs hammering one `.git/`" automatically safe.
 - Figure out the recommended way to create signed commits and push to GitHub
   from inside the VM (e.g. forwarding the host's 1Password SSH agent over a
   vsock/TCP bridge, or a per-VM signing key registered with GitHub). Until
