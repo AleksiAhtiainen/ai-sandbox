@@ -151,6 +151,8 @@ signing key.
 
 ## (Possible) TODOs
 
+- There are now GUI settings specific to Macs, think how to modularize (e.g. keyboard type)
+- Clean up unnecessary services from the modules: currently there is probably added fluff
 - Investigate replacing the 9p `cache=loose` share with virtiofs (and
   POSIX-lock pass-through), which would give host + multiple VMs a coherent
   view of `~/koski-share/` and make concurrent access safer.
