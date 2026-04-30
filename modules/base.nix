@@ -42,6 +42,8 @@
     git
     spice-vdagent
     chromium
+    jdk17
+    (maven.override { jdk_headless = jdk17; })
   ];
 
   system.stateVersion = "25.11";
