@@ -185,6 +185,13 @@ Lima/Tart VM, or CI).
   bindfs layer mounted — `mount | grep fuse.bindfs` should show
   `/mnt/share`. If only `/run/koskishare` is mounted, the bindfs unit
   failed; `journalctl -u mnt-share.mount` shows why.
+- **VM sees stale content under `/mnt/share` after host-side edits**:
+  the 9p share uses `cache=loose` and bindfs caches on top, so the
+  guest doesn't revalidate against the host. For content-only edits,
+  drop the guest caches:
+  `sync && sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'`. Structural
+  changes (rename, delete, swap to symlink) can leave stale dentries
+  that survive this — reboot the VM in that case.
 - **"The password you use to log in to your computer no longer matches
   that of your login keyring"** (e.g. when launching Chromium): GDM
   auto-creates the GNOME login keyring on first login, encrypted with
