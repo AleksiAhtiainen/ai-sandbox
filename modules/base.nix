@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ pkgs, unstablePkgs, ... }:
 
 {
   networking.networkmanager.enable = true;
@@ -48,9 +48,13 @@
     nodejs_24
     pnpm
     docker-compose
+    unstablePkgs.jetbrains.idea  # IU 2026.1 from nixos-unstable; needs UTM display set to virtio-gpu-pci (no -gl) to render properly
+    # jetbrains-toolbox
   ];
 
   virtualisation.docker.enable = true;
+
+  programs.nix-ld.enable = true;
 
   system.activationScripts.binbash = ''
     ln -sfn ${pkgs.bashInteractive}/bin/bash /bin/bash

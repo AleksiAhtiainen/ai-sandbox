@@ -1,4 +1,4 @@
-{ pkgs, lib, claudePkgs, ... }:
+{ pkgs, lib, unstablePkgs, ... }:
 
 let
   readOr = path: default:
@@ -33,7 +33,7 @@ let
 in
 {
   environment.systemPackages = [
-    claudePkgs.claude-code
+    unstablePkgs.claude-code
   ];
 
   systemd.services.koski-claude-bootstrap = {

@@ -68,8 +68,8 @@ git pull host main
 # the team" below for how to push it back out via the host.
 nix flake update nixpkgs
 
-# To update only claude:
-nix flake update claude-pkgs
+# To update only the unstable input (claude-code, IntelliJ IDEA, …):
+nix flake update unstable
 
 # Commit the resulting flake.lock changes, if required
 git add ...
@@ -192,6 +192,33 @@ Lima/Tart VM, or CI).
   `sync && sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'`. Structural
   changes (rename, delete, swap to symlink) can leave stale dentries
   that survive this — reboot the VM in that case.
+- **JetBrains IDE (IDEA, Toolbox, …) shows a corrupted splash / EULA
+  dialog**: the default UTM display device on Apple Silicon
+  (`virtio-gpu-gl-pci`) mangles the framebuffer for JetBrains'
+  Skia/JBR renderer. Two workarounds, lighter first:
+
+  1. Disable HW acceleration **only inside the IDE**. Add to
+     `~/.config/JetBrains/IntelliJIdea<version>/idea64.vmoptions`
+     (create the file if missing):
+
+     ```
+     -Dide.ui.hw.acceleration=false
+     -Dsun.java2d.opengl=false
+     -Dsun.java2d.d3d=false
+     -Dsun.java2d.metal=false
+     -Dsun.java2d.xrender=false
+     -Dsun.java2d.pmoffscreen=false
+     ```
+
+     Restart IDEA. Other apps keep host-side GL; IDEA renders correctly
+     but its own UI is slower. Adjust `<version>` (e.g. `2026.1`) per
+     installed IDEA.
+
+  2. Disable host-side GL globally for the VM. In UTM → Settings →
+     Display, switch the **Display Device** to `virtio-gpu-pci` (no
+     `-gl`). All apps lose host GL acceleration — noticeably slower
+     overall — but rendering everywhere becomes correct. Use this if
+     other Java/Skia apps misrender too.
 - **"The password you use to log in to your computer no longer matches
   that of your login keyring"** (e.g. when launching Chromium): GDM
   auto-creates the GNOME login keyring on first login, encrypted with

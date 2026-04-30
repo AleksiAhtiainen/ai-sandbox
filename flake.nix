@@ -3,14 +3,14 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
-    claude-pkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
     nixos-generators = {
       url = "github:nix-community/nixos-generators";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
-  outputs = { self, nixpkgs, claude-pkgs, nixos-generators }:
+  outputs = { self, nixpkgs, unstable, nixos-generators }:
     let
       systems = [ "aarch64-linux" "x86_64-linux" ];
       forAllSystems = nixpkgs.lib.genAttrs systems;
@@ -29,7 +29,7 @@
 
       mkSpecialArgs = system: {
         flakeSelf = self;
-        claudePkgs = import claude-pkgs {
+        unstablePkgs = import unstable {
           inherit system;
           config.allowUnfree = true;
         };
