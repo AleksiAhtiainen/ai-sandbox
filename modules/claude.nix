@@ -17,7 +17,8 @@ let
 
       flake=/mnt/share/koski-sandbox
 
-      sudo nix flake update claude-pkgs --flake "$flake"
+      #sudo
+      nix flake update claude-pkgs --flake "$flake"
 
       arch=$(uname -m)
       case "$arch" in
