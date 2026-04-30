@@ -87,16 +87,26 @@ host's share directory and rebuild from `/mnt/share` inside the VM:
 
 ```sh
 # On the host, once:
-mv /path/to/your/koski-nixos-sandbox-config ~/koski-share/
+mv /path/to/your/koski-sandbox ~/koski-share/
 
 # In the VM, after every edit:
 sudo nixos-rebuild switch \
-  --flake /mnt/share/koski-nixos-sandbox-config#sandbox-$(uname -m)-linux \
+  --flake /mnt/share/koski-sandbox#sandbox-$(uname -m)-linux \
   --impure
 ```
 
 This way you edit on the host with your normal tools, and the VM rebuilds
 from the same files via 9p + bindfs.
+
+Note: the 9p share is mounted with `cache=loose`, and bindfs adds its own
+caching on top. The guest does not revalidate against the host, so any
+structural change you make on the host while the VM is running — renaming
+or moving the share directory, deleting files, swapping a file for a
+symlink — can leave the VM with stale dentries that survive even an
+`umount` + `mount`. Symptoms include `ls` showing files that `open()`
+then can't find, and `?` in the ACL column of `ls -l`. Plain in-place
+edits (saving a file from your editor) are fine; for anything more
+invasive, shut the VM down first, or be prepared to reboot it.
 
 ## Claude Code
 
@@ -138,7 +148,7 @@ update-claude
 ```
 
 This runs `nix flake update claude-pkgs` against
-`/mnt/share/koski-nixos-sandbox-config` and rebuilds. To bump everything
+`/mnt/share/koski-sandbox` and rebuilds. To bump everything
 else, use the whole-system rebuild command in the section above.
 
 ## Maintainer setup (building the seed)
@@ -148,7 +158,7 @@ the target architecture — your existing UTM NixOS VM works for the
 aarch64 seed.
 
 ```sh
-cd ~/koski-nixos-sandbox-config   # or wherever you have it cloned
+cd ~/koski-sandbox   # or wherever you have it cloned
 nix build .#packages.aarch64-linux.image --impure -L
 cp -L result/nixos.qcow2 /mnt/share/koski-sandbox-aarch64.qcow2
 ```

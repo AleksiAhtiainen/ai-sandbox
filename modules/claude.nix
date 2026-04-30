@@ -15,7 +15,7 @@ let
     text = ''
       set -euo pipefail
 
-      flake=/mnt/share/koski-nixos-sandbox-config
+      flake=/mnt/share/koski-sandbox
 
       sudo nix flake update claude-pkgs --flake "$flake"
 
