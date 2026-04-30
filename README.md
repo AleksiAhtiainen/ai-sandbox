@@ -16,7 +16,7 @@ The short version — see the detailed sections below for context and gotchas.
 # On the host (one-time setup):
 mkdir -p ~/koski-share
 echo "$USER" > ~/koski-share/.host-username
-git clone <repo-url> ~/koski-share/koski-sandbox
+git clone git@github.com:Opetushallitus/koski-sandbox.git ~/koski-share/koski-sandbox-vm
 
 # Grab koski-sandbox-<arch>.qcow2 from team storage. Create a VM with it:
 #   - use that qcow2 as the existing disk
@@ -31,17 +31,19 @@ git clone <repo-url> ~/koski-share/koski-sandbox
 ```sh
 # Pull the latest config from the remote repo (on the host — the VM has
 # no credentials):
-git -C ~/koski-share/koski-sandbox pull
+git -C ~/koski-share/koski-sandbox-vm pull
 
-# Bump pinned nixpkgs package versions yourself (in the VM, weekly-ish):
-nix flake update nixpkgs --flake /mnt/share/koski-sandbox
+# In the VM, cd into the share so the flake is the cwd:
+cd /mnt/share/koski-sandbox-vm
 
-# Apply changes — run after either of the above (in the VM):
-sudo nixos-rebuild switch \
-  --flake /mnt/share/koski-sandbox#sandbox-$(uname -m)-linux --impure
+# Bump pinned nixpkgs package versions yourself (weekly-ish):
+nix flake update nixpkgs
 
-# Pull a newer Claude Code release (separate flake input, see below):
-update-claude
+# Apply changes — run after either of the above:
+sudo nixos-rebuild switch --flake .#sandbox-$(uname -m)-linux --impure
+
+# To bump only Claude Code (separate flake input, see below), run
+# `nix flake update claude-pkgs` instead of nixpkgs, then rebuild.
 ```
 
 ## End-user setup (each teammate)
@@ -123,12 +125,11 @@ host's share directory and rebuild from `/mnt/share` inside the VM:
 
 ```sh
 # On the host, once:
-mv /path/to/your/koski-sandbox ~/koski-share/
+mv /path/to/your/koski-sandbox ~/koski-share/koski-sandbox-vm
 
 # In the VM, after every edit:
-sudo nixos-rebuild switch \
-  --flake /mnt/share/koski-sandbox#sandbox-$(uname -m)-linux \
-  --impure
+cd /mnt/share/koski-sandbox-vm
+sudo nixos-rebuild switch --flake .#sandbox-$(uname -m)-linux --impure
 ```
 
 This way you edit on the host with your normal tools, and the VM rebuilds
@@ -143,11 +144,9 @@ disabled because `/nix/store` is read-only. To get newer versions of Chromium
 and the rest of nixpkgs, run periodically (weekly is a reasonable cadence):
 
 ```sh
-cd /mnt/share/koski-sandbox
+cd /mnt/share/koski-sandbox-vm
 nix flake update nixpkgs
-sudo nixos-rebuild switch \
-  --flake /mnt/share/koski-sandbox#sandbox-$(uname -m)-linux \
-  --impure
+sudo nixos-rebuild switch --flake .#sandbox-$(uname -m)-linux --impure
 ```
 
 Commit the resulting `flake.lock` change so the rest of the team picks up
@@ -166,8 +165,7 @@ invasive, shut the VM down first, or be prepared to reboot it.
 ## Claude Code
 
 The VM ships with [Claude Code](https://docs.claude.com/en/docs/claude-code)
-preinstalled (`claude` on `PATH`) and an `update-claude` command for pulling
-the latest release on demand.
+preinstalled (`claude` on `PATH`).
 
 ### Where Claude state lives
 
@@ -196,15 +194,17 @@ every file, with stale-cache reads on top.
 
 `claude-code` is pinned via a dedicated `claude-pkgs` flake input that
 tracks `nixos-unstable`, separately from the rest of the system (which
-stays on `nixos-25.11`). To pull the newest release:
+stays on `nixos-25.11`). To pull the newest release, run the same flow
+as for nixpkgs but against the `claude-pkgs` input:
 
 ```sh
-update-claude
+cd /mnt/share/koski-sandbox-vm
+nix flake update claude-pkgs
+sudo nixos-rebuild switch --flake .#sandbox-$(uname -m)-linux --impure
 ```
 
-This runs `nix flake update claude-pkgs` against
-`/mnt/share/koski-sandbox` and rebuilds. To bump everything
-else, use the whole-system rebuild command in the section above.
+To bump everything, use the whole-system rebuild command in the section
+above instead.
 
 ## Maintainer setup (building the seed)
 

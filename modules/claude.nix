@@ -9,28 +9,6 @@ let
   username = readOr "/etc/koski-sandbox-username" "sandbox";
   homeDir = "/home/${username}";
 
-  updateClaude = pkgs.writeShellApplication {
-    name = "update-claude";
-    runtimeInputs = with pkgs; [ coreutils ];
-    text = ''
-      set -euo pipefail
-
-      flake=/mnt/share/koski-sandbox
-
-      #sudo
-      nix flake update claude-pkgs --flake "$flake"
-
-      arch=$(uname -m)
-      case "$arch" in
-        aarch64) target=sandbox-aarch64-linux ;;
-        x86_64)  target=sandbox-x86_64-linux ;;
-        *) echo "unsupported architecture: $arch" >&2; exit 1 ;;
-      esac
-
-      sudo nixos-rebuild switch --flake "$flake#$target" --impure
-    '';
-  };
-
   bootstrap = pkgs.writeShellApplication {
     name = "koski-claude-bootstrap";
     runtimeInputs = with pkgs; [ coreutils ];
@@ -56,7 +34,6 @@ in
 {
   environment.systemPackages = [
     claudePkgs.claude-code
-    updateClaude
   ];
 
   systemd.services.koski-claude-bootstrap = {
