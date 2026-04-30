@@ -8,6 +8,42 @@ licensing). The VM user is always uid `1000` / gid `100` (`users`); the
 ownership, so files appear as the VM user regardless of host uid/gid (501
 / 20 on macOS, 1000 / 100 on Linux, etc.) — no `chown` needed.
 
+## Quick start
+
+The short version — see the detailed sections below for context and gotchas.
+
+```sh
+# On the host (one-time setup):
+mkdir -p ~/koski-share
+echo "$USER" > ~/koski-share/.host-username
+git clone <repo-url> ~/koski-share/koski-sandbox
+
+# Grab koski-sandbox-<arch>.qcow2 from team storage. Create a VM with it:
+#   - use that qcow2 as the existing disk
+#   - add a 9p / VirtFS share named exactly `share` → ~/koski-share
+#   - ≥ 16 GB RAM (more is better in practice), ≥ 4 cores
+# Boot, wait ~1–2 min for first-boot personalization, log in as your host
+# username (password: changeme), then run `passwd`.
+```
+
+### Keeping the VM up to date
+
+```sh
+# Pull the latest config from the remote repo (on the host — the VM has
+# no credentials):
+git -C ~/koski-share/koski-sandbox pull
+
+# Bump pinned nixpkgs package versions yourself (in the VM, weekly-ish):
+nix flake update nixpkgs --flake /mnt/share/koski-sandbox
+
+# Apply changes — run after either of the above (in the VM):
+sudo nixos-rebuild switch \
+  --flake /mnt/share/koski-sandbox#sandbox-$(uname -m)-linux --impure
+
+# Pull a newer Claude Code release (separate flake input, see below):
+update-claude
+```
+
 ## End-user setup (each teammate)
 
 You don't need Nix on your host. You need a VM runtime that supports a 9p
