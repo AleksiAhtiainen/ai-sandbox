@@ -98,6 +98,25 @@ sudo nixos-rebuild switch \
 This way you edit on the host with your normal tools, and the VM rebuilds
 from the same files via 9p + bindfs.
 
+### Pulling fresh package versions (Chromium, etc.)
+
+The above command rebuilds against the currently pinned `flake.lock`, so it
+only picks up new package versions when the lock is bumped. Packages in the
+Nix store don't self-update — Chromium in particular has its built-in updater
+disabled because `/nix/store` is read-only. To get newer versions of Chromium
+and the rest of nixpkgs, run periodically (weekly is a reasonable cadence):
+
+```sh
+cd /mnt/share/koski-sandbox
+nix flake update nixpkgs
+sudo nixos-rebuild switch \
+  --flake /mnt/share/koski-sandbox#sandbox-$(uname -m)-linux \
+  --impure
+```
+
+Commit the resulting `flake.lock` change so the rest of the team picks up
+the same versions on their next rebuild.
+
 Note: the 9p share is mounted with `cache=loose`, and bindfs adds its own
 caching on top. The guest does not revalidate against the host, so any
 structural change you make on the host while the VM is running — renaming

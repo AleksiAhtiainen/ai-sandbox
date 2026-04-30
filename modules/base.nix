@@ -41,6 +41,7 @@
     wget
     git
     spice-vdagent
+    chromium
   ];
 
   system.stateVersion = "25.11";
