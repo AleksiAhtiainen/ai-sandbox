@@ -157,6 +157,8 @@ signing key.
 - Investigate replacing the 9p `cache=loose` share with virtiofs (and
   POSIX-lock pass-through), which would give host + multiple VMs a coherent
   view of `~/koski-share/` and make concurrent access safer.
+- Investigate, if there is a way to get IntelliJ IDEA working with HW acceleration in MacOS
+UTM hosted VM
 - Figure out the recommended way to create signed commits and push to GitHub
   from inside the VM (e.g. forwarding the host's 1Password SSH agent over a
   vsock/TCP bridge, or a per-VM signing key registered with GitHub). Until
