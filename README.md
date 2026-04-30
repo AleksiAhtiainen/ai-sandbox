@@ -151,6 +151,7 @@ signing key.
 
 ## (Possible) TODOs
 
+- Add swap file/partition by default
 - There are now GUI settings specific to Macs, think how to modularize (e.g. keyboard type)
 - Clean up unnecessary services from the modules: currently there is probably added fluff
 - Investigate replacing the 9p `cache=loose` share with virtiofs (and
