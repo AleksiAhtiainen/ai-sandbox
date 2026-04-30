@@ -44,7 +44,17 @@
     chromium
     jdk17
     (maven.override { jdk_headless = jdk17; })
+    gnumake
+    nodejs_24
+    pnpm
+    docker-compose
   ];
+
+  virtualisation.docker.enable = true;
+
+  system.activationScripts.binbash = ''
+    ln -sfn ${pkgs.bashInteractive}/bin/bash /bin/bash
+  '';
 
   system.stateVersion = "25.11";
 }

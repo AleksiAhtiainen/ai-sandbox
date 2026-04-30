@@ -14,7 +14,7 @@ in
     uid = 1000;
     group = "users";
     description = username;
-    extraGroups = [ "networkmanager" "wheel" ];
+    extraGroups = [ "networkmanager" "wheel" "docker" ];
     initialPassword = "changeme";
   };
 
