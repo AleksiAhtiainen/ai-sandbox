@@ -28,7 +28,7 @@
 
   boot.growPartition = lib.mkDefault true;
 
-  virtualisation.diskSize = 128 * 1024;
+  virtualisation.diskSize = lib.mkDefault "auto";
 
   boot.loader.grub = {
     enable = lib.mkDefault true;
