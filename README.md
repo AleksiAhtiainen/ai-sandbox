@@ -16,7 +16,8 @@ The short version — see the detailed sections below for context and gotchas.
 # On the host (one-time setup):
 mkdir -p ~/koski-share
 echo "$USER" > ~/koski-share/.host-username
-git clone git@github.com:Opetushallitus/koski-sandbox.git ~/koski-share/koski-sandbox-vm
+git clone git@github.com:Opetushallitus/koski-sandbox.git \
+  ~/koski-share/koski-sandbox-host
 
 # Grab koski-sandbox-<arch>.qcow2 from team storage. Create a VM with it:
 #   - use that qcow2 as the existing disk
@@ -24,143 +25,59 @@ git clone git@github.com:Opetushallitus/koski-sandbox.git ~/koski-share/koski-sa
 #   - ≥ 16 GB RAM (more is better in practice), ≥ 4 cores
 # Boot, wait ~1–2 min for first-boot personalization, log in as your host
 # username (password: changeme), then run `passwd`.
+
+# Inside the VM (one-time, after first boot): make a VM-writable clone
+# from the host-writable one, with the cross-clone remote named `host`:
+git -c clone.defaultRemoteName=host clone \
+  /mnt/share/koski-sandbox-host /mnt/share/koski-sandbox-vm
+cd /mnt/share/koski-sandbox-vm
+sudo nixos-rebuild switch --flake .#sandbox-$(uname -m)-linux --impure
+
+# Optional, on the host: add the VM clone as a remote named `vm`, so the
+# host can pull VM-side changes (e.g. flake.lock bumps) back out:
+git -C ~/koski-share/koski-sandbox-host remote add vm \
+  ../koski-sandbox-vm
 ```
+
+The share now holds two sibling clones of this repo, one per writer:
+
+| Path (VM view)                  | Written by | Remotes                            |
+| ------------------------------- | ---------- | ---------------------------------- |
+| `/mnt/share/koski-sandbox-host` | host only  | GitHub + `vm` → VM dir             |
+| `/mnt/share/koski-sandbox-vm`   | VM only    | `host` → host dir                  |
+
+Each side only ever **pulls** from the other; neither side ever pushes
+into the other dir. That keeps the "single writer per file" invariant
+that the 9p `cache=loose` share needs (no lock manager → concurrent
+writers corrupt refs and the index). Pushing to GitHub is fine — but do
+it only from the host, since the VM has no credentials.
 
 ### Keeping the VM up to date
 
 ```sh
-# Pull the latest config from the remote repo (on the host — the VM has
-# no credentials):
-git -C ~/koski-share/koski-sandbox-vm pull
+# On the host: pull the latest config from GitHub into the host-writable
+# clone (the VM has no credentials, so this can't happen in the VM):
+git -C ~/koski-share/koski-sandbox-host pull
 
-# In the VM, cd into the share so the flake is the cwd:
+# In the VM: pull from the host-writable clone:
 cd /mnt/share/koski-sandbox-vm
+git pull host main
 
-# Bump pinned nixpkgs package versions yourself (weekly-ish):
+# Bump pinned nixpkgs package versions yourself (weekly-ish). This writes
+# the new flake.lock into the VM dir — see "Sharing flake.lock bumps with
+# the team" below for how to push it back out via the host.
 nix flake update nixpkgs
 
-# Apply changes — run after either of the above:
-sudo nixos-rebuild switch --flake .#sandbox-$(uname -m)-linux --impure
+# To update only claude:
+nix flake update claude-pkgs
 
-# To bump only Claude Code (separate flake input, see below), run
-# `nix flake update claude-pkgs` instead of nixpkgs, then rebuild.
-```
+# Commit the resulting flake.lock changes, if required
+git add ...
+git commit ...
 
-## End-user setup (each teammate)
-
-You don't need Nix on your host. You need a VM runtime that supports a 9p
-share named `share`:
-
-- **Apple Silicon Mac**: [UTM](https://mac.getutm.app/), VirtFS share.
-- **Intel Linux**: virt-manager with a Filesystem device.
-
-### 1. Get the seed image
-
-Download the qcow2 for your architecture from the team's shared storage
-(name to be decided once the first seed is built):
-
-- `koski-sandbox-aarch64.qcow2` — Apple Silicon Mac.
-- `koski-sandbox-x86_64.qcow2` — Intel Linux.
-
-### 2. Prepare the host share
-
-```sh
-mkdir -p ~/koski-share
-echo "$USER" > ~/koski-share/.host-username
-```
-
-`.host-username` is read once at first boot to set the VM's user account.
-
-### 3. Create the VM
-
-#### UTM (Apple Silicon Mac)
-
-1. Create a New Virtual Machine → **Virtualize** → Linux → **Use existing**
-   → select the qcow2.
-2. Memory ≥ 4 GB, CPU ≥ 4 cores, UEFI on (default).
-3. Settings → **Sharing** → Directory Share Mode = **VirtFS**, Path =
-   `~/koski-share`. **Share name must be exactly `share`** (matches
-   `fileSystems."/mnt/share".device`).
-4. Save.
-
-#### virt-manager (Intel Linux)
-
-1. New VM → **Import existing disk image** → select qcow2.
-2. Q35 chipset, UEFI firmware, virtio disk + virtio NIC.
-3. Add Hardware → **Filesystem**: Driver `path`, Source = host share dir,
-   Target path = **`share`**.
-4. Display = SPICE; Channel = `org.spice-space.webdav.0` and `spicevmc`
-   (default in modern virt-manager).
-
-### 4. First boot
-
-Start the VM. GDM appears. The VM runs `koski-firstboot.service` in the
-background — you can watch it:
-
-```sh
-# Log in to the throwaway "sandbox" account (password: changeme)
-journalctl -u koski-firstboot -f
-```
-
-After ~1–2 minutes the VM personalizes itself with your host username and
-reboots. Log in as `<your-host-username>` (password `changeme`); run
-`passwd` immediately.
-
-### 5. Verify
-
-```sh
-whoami            # → your host username
-id                # → uid=1000 gid=100(users)
-ls -la /mnt/share # files appear as <you>:users via bindfs, no chown needed
-mount | grep share
-# /run/koskishare on 9p
-# /mnt/share on fuse.bindfs (layered on top)
-```
-
-## Updating the configuration after first boot
-
-Inside the VM, the build-time flake source is at `/etc/nixos` (read-only,
-in the Nix store). For changes, keep a writable copy of this repo on the
-host's share directory and rebuild from `/mnt/share` inside the VM:
-
-```sh
-# On the host, once:
-mv /path/to/your/koski-sandbox ~/koski-share/koski-sandbox-vm
-
-# In the VM, after every edit:
-cd /mnt/share/koski-sandbox-vm
+# Apply changes — run after any of the above:
 sudo nixos-rebuild switch --flake .#sandbox-$(uname -m)-linux --impure
 ```
-
-This way you edit on the host with your normal tools, and the VM rebuilds
-from the same files via 9p + bindfs.
-
-### Pulling fresh package versions (Chromium, etc.)
-
-The above command rebuilds against the currently pinned `flake.lock`, so it
-only picks up new package versions when the lock is bumped. Packages in the
-Nix store don't self-update — Chromium in particular has its built-in updater
-disabled because `/nix/store` is read-only. To get newer versions of Chromium
-and the rest of nixpkgs, run periodically (weekly is a reasonable cadence):
-
-```sh
-cd /mnt/share/koski-sandbox-vm
-nix flake update nixpkgs
-sudo nixos-rebuild switch --flake .#sandbox-$(uname -m)-linux --impure
-```
-
-Commit the resulting `flake.lock` change so the rest of the team picks up
-the same versions on their next rebuild.
-
-Note: the 9p share is mounted with `cache=loose`, and bindfs adds its own
-caching on top. The guest does not revalidate against the host, so any
-structural change you make on the host while the VM is running — renaming
-or moving the share directory, deleting files, swapping a file for a
-symlink — can leave the VM with stale dentries that survive even an
-`umount` + `mount`. Symptoms include `ls` showing files that `open()`
-then can't find, and `?` in the ACL column of `ls -l`. Plain in-place
-edits (saving a file from your editor) are fine; for anything more
-invasive, shut the VM down first, or be prepared to reboot it.
 
 ## Claude Code
 
@@ -173,38 +90,13 @@ preinstalled (`claude` on `PATH`).
 state Claude Code writes — settings, memories, MCP config, OAuth login,
 project history, todos — survives `nixos-rebuild`, VM shutdown, and
 recreating the VM from the seed image, as long as you keep using the same
-`~/koski-share`. If a previous version of this VM had a real `~/.claude`
-directory, it is migrated onto the share once on the next boot and replaced
-with the symlink.
-
-Note: This does not keep multiple VMs using same username sandboxed from each
-other, only from the HOST. E.g. a pormpt-injection compromise in one VM could
-plant a hook in the common settings that another VM ends up using. This is also
-why `~/.claude/` is **not** a symlink to your host's own
-`~/.claude/`: the VM is supposed to be a sandbox, so the host's own
-credentials, hooks, and history stay outside the VM's reach.
+`~/koski-share`. 
 
 ### Be careful running multiple VMs as the same user simultaneously
 
 The 9p file sharing has no lock manager and uses `cache=loose`. Two VMs
 writing to the same `/mnt/share/claude/<user>/` give last-writer-wins on
 every file, with stale-cache reads on top.
-
-### Updating Claude Code
-
-`claude-code` is pinned via a dedicated `claude-pkgs` flake input that
-tracks `nixos-unstable`, separately from the rest of the system (which
-stays on `nixos-25.11`). To pull the newest release, run the same flow
-as for nixpkgs but against the `claude-pkgs` input:
-
-```sh
-cd /mnt/share/koski-sandbox-vm
-nix flake update claude-pkgs
-sudo nixos-rebuild switch --flake .#sandbox-$(uname -m)-linux --impure
-```
-
-To bump everything, use the whole-system rebuild command in the section
-above instead.
 
 ## Maintainer setup (building the seed)
 
@@ -213,7 +105,7 @@ the target architecture — your existing UTM NixOS VM works for the
 aarch64 seed.
 
 ```sh
-cd ~/koski-sandbox   # or wherever you have it cloned
+cd ~/koski-share/koski-sandbox-host   # or wherever you have it cloned
 nix build .#packages.aarch64-linux.image --impure -L
 cp -L result/nixos.qcow2 /mnt/share/koski-sandbox-aarch64.qcow2
 ```
@@ -241,13 +133,6 @@ cat > ~/koski-share/.gitconfig <<'EOF'
   email = you@example.com
 EOF
 ```
-
-On the next boot (or after `sudo systemctl restart koski-git-bootstrap`),
-`~/.gitconfig` inside the VM becomes a symlink to `/mnt/share/.gitconfig`.
-Edits on either side are visible to the other, so `git config --global ...`
-inside the VM writes back to the share. If `~/.gitconfig` already exists as a
-real file, it is moved to `~/.gitconfig.bak.<timestamp>` before the symlink
-replaces it.
 
 **Don't symlink your host's real `~/.gitconfig` into `~/koski-share/`.** Use a
 VM-specific copy. The host config typically references things that don't make
