@@ -241,6 +241,11 @@ the manual seed handoff).
 - Bootstrap path for users who don't yet have any NixOS VM and need to build a seed from
 scratch on macOS (would bring back something like nix-darwin linux-builder, or a temporary
 Lima/Tart VM, or CI).
+- Figure out the easiest way to paste images from the host clipboard into the
+  Claude Code shell running in the VM (Claude Code accepts image paste in the
+  terminal, but SPICE/UTM clipboard sharing typically only forwards text, so
+  today you'd have to save the image to `~/koski-share/` on the host and
+  reference it by path from inside the VM).
 
 ## Troubleshooting
 
@@ -258,3 +263,12 @@ Lima/Tart VM, or CI).
   bindfs layer mounted — `mount | grep fuse.bindfs` should show
   `/mnt/share`. If only `/run/koskishare` is mounted, the bindfs unit
   failed; `journalctl -u mnt-share.mount` shows why.
+- **"The password you use to log in to your computer no longer matches
+  that of your login keyring"** (e.g. when launching Chromium): GDM
+  auto-creates the GNOME login keyring on first login, encrypted with
+  the seed password (`changeme`). Running `passwd` afterwards doesn't
+  rekey the keyring, so PAM can no longer auto-unlock it. Either nuke
+  it (loses saved Chromium cookies/passwords) — `rm -rf
+  ~/.local/share/keyrings`, then log out and back in — or open Seahorse
+  (`seahorse`), right-click the "Login" keyring → Change Password, with
+  old = `changeme` and new = your current login password.
