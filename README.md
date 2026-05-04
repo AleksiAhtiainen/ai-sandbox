@@ -2,9 +2,7 @@
 
 Reusable, team-shareable NixOS VM image for the Koski sandbox. 
 
-## Quick start
-
-The short version — see the detailed sections below for context and gotchas.
+## How to start
 
 ```sh
 # On the host (one-time setup):
@@ -53,13 +51,16 @@ it only from the host, since the VM has no credentials.
 # clone (the VM has no credentials, so this can't happen in the VM):
 git -C ~/koski-share/koski-sandbox-host pull
 
-# In the VM: pull from the host-writable clone:
+# In the VM: drop stale 9p caches first so the host's new commits are
+# visible (cache=loose doesn't revalidate against the host on its own),
+# then pull from the host-writable clone:
+sync && sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'
 cd /mnt/share/koski-sandbox-vm
 git pull host main
 
 # Bump pinned nixpkgs package versions yourself (weekly-ish). This writes
-# the new flake.lock into the VM dir — see "Sharing flake.lock bumps with
-# the team" below for how to push it back out via the host.
+# the new flake.lock into the VM dir — publish it back to GitHub via the
+# host with the steps below.
 nix flake update nixpkgs
 
 # To update only the unstable input (claude-code, IntelliJ IDEA, …):
@@ -71,6 +72,29 @@ git commit ...
 
 # Apply changes — run after any of the above:
 sudo nixos-rebuild switch --flake .#sandbox-$(uname -m)-linux --impure
+
+# Publish VM-side commits (flake.lock bumps, config tweaks) back to
+# GitHub. The VM has no GitHub credentials and no signing key, so
+# re-signing and pushing must happen on the host.
+
+# In the VM: flush writes through 9p so the host can see the new commits:
+sync
+
+# On the host: fetch the VM's commits and review them before re-signing.
+# `git log main..vm/main` shows exactly what cherry-pick is about to
+# replay; `--stat` adds the diffstat, drop it for a leaner view.
+cd ~/koski-share/koski-sandbox-host
+git fetch vm main
+git log --stat main..vm/main
+
+# Then re-sign each commit with the host's key and push to GitHub:
+git cherry-pick -S main..vm/main
+git push origin
+
+# Back in the VM: drop caches and pull so the VM tracks the now-signed
+# published history (and so its `main` matches `origin/main`):
+sync && sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'
+git -C /mnt/share/koski-sandbox-vm pull host main
 ```
 
 ## Claude Code
