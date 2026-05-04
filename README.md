@@ -1,12 +1,6 @@
 # Koski NixOS sandbox VM
 
-Reusable, team-shareable NixOS VM image for the Koski sandbox. One generic
-qcow2 per architecture is built and distributed; each teammate's VM
-personalizes itself on first boot to match the host username (required for
-licensing). The VM user is always uid `1000` / gid `100` (`users`); the
-`/mnt/share` mount is a `bindfs` layer over the raw 9p mount that remaps
-ownership, so files appear as the VM user regardless of host uid/gid (501
-/ 20 on macOS, 1000 / 100 on Linux, etc.) — no `chown` needed.
+Reusable, team-shareable NixOS VM image for the Koski sandbox. 
 
 ## Quick start
 
@@ -173,6 +167,17 @@ Lima/Tart VM, or CI).
   terminal, but SPICE/UTM clipboard sharing typically only forwards text, so
   today you'd have to save the image to `~/koski-share/` on the host and
   reference it by path from inside the VM).
+
+## Technical notes
+
+One generic qcow2 per architecture is built and distributed; each teammate's VM
+personalizes itself on first boot to match the host username (required for
+licensing).
+
+The VM user is always uid `1000` / gid `100` (`users`); the
+`/mnt/share` mount is a `bindfs` layer over the raw 9p mount that remaps
+ownership, so files appear as the VM user regardless of host uid/gid (501
+/ 20 on macOS, 1000 / 100 on Linux, etc.).
 
 ## Troubleshooting
 
