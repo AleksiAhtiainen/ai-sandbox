@@ -207,9 +207,11 @@ ownership, so files appear as the VM user regardless of host uid/gid (501
   (`virtio-gpu-gl-pci`) mangles the framebuffer for JetBrains'
   Skia/JBR renderer. Two workarounds, lighter first:
 
-  1. Disable HW acceleration **only inside the IDE**. Add to
-     `~/.config/JetBrains/IntelliJIdea<version>/idea64.vmoptions`
-     (create the file if missing):
+  1. Disable HW acceleration **only inside the IDE**. Drop these lines
+     into `/mnt/share/idea64.vmoptions` on the host (the VM sets
+     `IDEA_VM_OPTIONS` to that path system-wide, so every VM picks it up
+     and you skip the per-version `~/.config/JetBrains/IntelliJIdea<version>/`
+     dance):
 
      ```
      -Dide.ui.hw.acceleration=false
@@ -221,8 +223,7 @@ ownership, so files appear as the VM user regardless of host uid/gid (501
      ```
 
      Restart IDEA. Other apps keep host-side GL; IDEA renders correctly
-     but its own UI is slower. Adjust `<version>` (e.g. `2026.1`) per
-     installed IDEA.
+     but its own UI is slower.
 
   2. Disable host-side GL globally for the VM. In UTM → Settings →
      Display, switch the **Display Device** to `virtio-gpu-pci` (no
@@ -232,8 +233,8 @@ ownership, so files appear as the VM user regardless of host uid/gid (501
 - **Markdown preview pane (e.g. opening `README.md`) shows a black
   screen** even after the splash/EULA workaround above: the preview is
   rendered by JCEF (embedded Chromium), which has its own GPU pipeline
-  not covered by the Java2D flags. Add to the same `idea64.vmoptions`
-  file as above:
+  not covered by the Java2D flags. Append to the same
+  `/mnt/share/idea64.vmoptions` as above:
 
   ```
   -Dide.browser.jcef.gpu.disable=true
