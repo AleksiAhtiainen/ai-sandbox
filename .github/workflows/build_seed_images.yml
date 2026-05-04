@@ -9,28 +9,30 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # ubuntu-24.04-arm runners don't expose /dev/kvm.
+          # nixos-generators' make-disk-image.nix declares
+          # requiredSystemFeatures = [ "kvm" ] for performance reasons,
+          # but qemu inside it falls back to TCG when KVM is missing.
+          # We satisfy the Nix-level constraint by advertising kvm in
+          # system-features anyway; the build then runs in software
+          # emulation. Expect the inner nixos-install VM to be ~10–50×
+          # slower than on x86_64.
           - arch: aarch64
             runs-on: ubuntu-24.04-arm
+            extra_nix_config: |
+              experimental-features = nix-command flakes
+              system-features = kvm benchmark big-parallel nixos-test uid-range
           - arch: x86_64
             runs-on: ubuntu-24.04
+            extra_nix_config: |
+              experimental-features = nix-command flakes
     runs-on: ${{ matrix.runs-on }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - name: Inspect KVM on runner
-        run: |
-          echo "uname: $(uname -a)"
-          if [ -e /dev/kvm ]; then
-            ls -la /dev/kvm
-            [ -r /dev/kvm ] && echo "/dev/kvm IS readable" || echo "/dev/kvm NOT readable"
-          else
-            echo "/dev/kvm does not exist"
-          fi
-
       - uses: cachix/install-nix-action@ab739621df7a23f52766f9ccc97f38da6b7af14f # v31.10.5
         with:
-          extra_nix_config: |
-            experimental-features = nix-command flakes
+          extra_nix_config: ${{ matrix.extra_nix_config }}
 
       - name: Build compressed seed image
         run: nix build .#packages.${{ matrix.arch }}-linux.compressedImage --impure -L
