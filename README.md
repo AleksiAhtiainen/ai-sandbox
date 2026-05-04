@@ -117,6 +117,10 @@ conduits between host and VM. Inventory (paths in VM view):
 
 ## ⚠ The share is the way out of the sandbox
 
+**TL;DR:** Treat anything the VM writes to `~/koski-share` as untrusted
+on the host — don't run it, and don't open it in tools that auto-execute
+code.
+
 `~/koski-share` is the only conduit between the VM and the host, and on
 the host it's a normal directory with full host privileges. Anything the
 VM writes there — directly, or via a compromised tool, dependency, or
@@ -203,8 +207,21 @@ teammate's first boot from `/mnt/share/.host-username`.
 For x86_64 the same command on an Intel-Linux NixOS environment, with
 `packages.x86_64-linux.compressedImage`.
 
-Distribute the resulting qcow2 to the team via shared storage. CI builds
-are out of scope for now (planned follow-up).
+Distribute the resulting qcow2 to the team via shared storage.
+
+### Building via GitHub Actions
+
+`.github/workflows/build_seed_images.yml` builds both seed images on
+GitHub-hosted runners. It's `workflow_dispatch` only — trigger it from the
+Actions tab (or `gh workflow run "Build seed images"`). The job runs the
+same `nix build .#packages.<arch>-linux.compressedImage` as the local
+recipe above and uploads the resulting qcow2 as a workflow artifact named
+`koski-sandbox-<arch>`, which you then download and stage on the share.
+
+The `x86_64` build runs on `ubuntu-24.04` with KVM. The `aarch64` build
+runs on `ubuntu-24.04-arm`, which doesn't expose `/dev/kvm`; the inner
+`nixos-install` VM falls back to TCG and is roughly 10–50× slower than
+the x86_64 job.
 
 ### Adding packages — what goes in the seed
 
