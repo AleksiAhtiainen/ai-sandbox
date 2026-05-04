@@ -167,6 +167,34 @@ The 9p file sharing has no lock manager and uses `cache=loose`. Two VMs
 writing to the same `/mnt/share/claude/<user>/` give last-writer-wins on
 every file, with stale-cache reads on top.
 
+## Git config
+
+Drop a `.gitconfig` on the share to give git an identity inside the VM:
+
+```sh
+# On the host:
+cat > ~/koski-share/.gitconfig <<'EOF'
+[user]
+  name = Your Name
+  email = you@example.com
+EOF
+```
+
+**Don't symlink your host's real `~/.gitconfig` into `~/koski-share/`.** Use a
+VM-specific copy. The host config typically references things that don't make
+sense in the sandbox (signing key paths, `gpg.program`, credential helpers,
+`includeIf` paths, custom diff/merge tools), and sharing it weakens the
+isolation the VM is meant to provide. A minimal `[user]` block is usually
+enough — add VM-only aliases and tooling on top as needed.
+
+### Working with git on the share
+
+Set up your git repos and remotes so that the same directory is never
+written concurrently by the host and/or multiple VMs — 9p `cache=loose` has
+no lock manager, so concurrent writers will corrupt refs and the index. Sign
+and push to GitHub from the host, since the VM has no credentials or
+signing key.
+
 ## Fish shell (optional)
 
 [Fish](https://fishshell.com/) is installed but not the default login
@@ -253,36 +281,16 @@ prohibits providing the IDE Product to third parties). For
 licensing-safe but heavy packages, put them in `dev-tools.nix`. When
 unsure, put the package in `postSeedModules`.
 
-## Git config
-
-Drop a `.gitconfig` on the share to give git an identity inside the VM:
-
-```sh
-# On the host:
-cat > ~/koski-share/.gitconfig <<'EOF'
-[user]
-  name = Your Name
-  email = you@example.com
-EOF
-```
-
-**Don't symlink your host's real `~/.gitconfig` into `~/koski-share/`.** Use a
-VM-specific copy. The host config typically references things that don't make
-sense in the sandbox (signing key paths, `gpg.program`, credential helpers,
-`includeIf` paths, custom diff/merge tools), and sharing it weakens the
-isolation the VM is meant to provide. A minimal `[user]` block is usually
-enough — add VM-only aliases and tooling on top as needed.
-
-### Working with git on the share
-
-Set up your git repos and remotes so that the same directory is never
-written concurrently by the host and/or multiple VMs — 9p `cache=loose` has
-no lock manager, so concurrent writers will corrupt refs and the index. Sign
-and push to GitHub from the host, since the VM has no credentials or
-signing key.
-
 ## (Possible) TODOs
 
+- Consider running an SSH server in the VM so users can `ssh` in from a
+  host terminal (better paste/scrollback/tmux story than the UTM console).
+    - If added, revisit the seed's default `changeme` password: shipping a
+      known password on a service that's reachable from the host (and any
+      forwarded port) is a much bigger footgun than on the local console.
+      Options: force `passwd` before sshd starts, disable password auth and
+      require a key dropped on the share, or only listen on a vsock/loopback
+      transport that isn't exposed beyond the host.
 - There are now GUI settings specific to Macs, think how to modularize (e.g. keyboard type)
 - Investigate replacing the 9p `cache=loose` share with virtiofs (and
   POSIX-lock pass-through), which would give host + multiple VMs a coherent
@@ -298,31 +306,19 @@ signing key.
   share is for genuinely shared dev state, not for "the VM needs to do
   anything outside itself."
 - Investigate, if there is a way to get IntelliJ IDEA working with HW acceleration in MacOS
-UTM hosted VM
+  UTM hosted VM
 - Figure out the recommended way to create signed commits and push to GitHub
   from inside the VM (e.g. forwarding the host's 1Password SSH agent over a
   vsock/TCP bridge, or a per-VM signing key registered with GitHub). Until
   then, sign and push from the host as described above.
-- GitHub Actions matrix building qcow2 for both arches and uploading to Releases (replaces
-the manual seed handoff). The seed itself no longer bundles IntelliJ IDEA or Claude Code
-— those land on first boot via `nixos-rebuild switch` against the in-image flake — so the
-public qcow2 is license-clean to ship via GitHub Releases.
 - Bootstrap path for users who don't yet have any NixOS VM and need to build a seed from
-scratch on macOS (would bring back something like nix-darwin linux-builder, or a temporary
-Lima/Tart VM, or CI).
+  scratch on macOS (would bring back something like nix-darwin linux-builder, or a temporary
+  Lima/Tart VM, or CI).
 - Figure out the easiest way to paste images from the host clipboard into the
   Claude Code shell running in the VM (Claude Code accepts image paste in the
   terminal, but SPICE/UTM clipboard sharing typically only forwards text, so
   today you'd have to save the image to `~/koski-share/` on the host and
   reference it by path from inside the VM).
-- Consider running an SSH server in the VM so users can `ssh` in from a
-  host terminal (better paste/scrollback/tmux story than the UTM console).
-    - If added, revisit the seed's default `changeme` password: shipping a
-      known password on a service that's reachable from the host (and any
-      forwarded port) is a much bigger footgun than on the local console.
-      Options: force `passwd` before sshd starts, disable password auth and
-      require a key dropped on the share, or only listen on a vsock/loopback
-      transport that isn't exposed beyond the host.
 
 ## Technical notes
 
