@@ -30,6 +30,11 @@
 
   virtualisation.diskSize = lib.mkDefault "auto";
 
+  swapDevices = [ {
+    device = "/var/swapfile";
+    size = 8 * 1024;
+  } ];
+
   boot.loader.grub = {
     enable = lib.mkDefault true;
     efiSupport = lib.mkDefault true;
