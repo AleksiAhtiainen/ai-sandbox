@@ -98,6 +98,35 @@ sync && sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'
 git -C /mnt/share/koski-sandbox-vm pull host main
 ```
 
+## ⚠ The share is the way out of the sandbox
+
+`~/koski-share` is the only conduit between the VM and the host, and on
+the host it's a normal directory with full host privileges. Anything the
+VM writes there — directly, or via a compromised tool, dependency, or
+agent — is sitting in your home directory ready to be picked up by host
+processes. The sandbox stops protecting you the moment you naively walk
+share contents back out to the host.
+
+Concretely, on the host side:
+
+- Don't run scripts or binaries from the share unless you'd run them
+  with no sandbox at all. The VM can plant them there.
+- Don't open share-resident projects in host tools that auto-execute
+  code: IDE plugins, LSP servers, `npm install` postinstall hooks,
+  `direnv`/`mise` autoloaders, git hooks (`pre-commit`, `post-checkout`,
+  `…`). Open them from inside the VM instead.
+- Be deliberate about which directories under the share host tools index
+  — a host editor that recursively scans `~/koski-share/` is reading
+  whatever the VM put there.
+- Treat anything *the VM has written* as untrusted input on the host,
+  even when you're the one who asked it to write it.
+
+If a workflow needs to do anything risky (running unfamiliar code,
+exercising a sketchy dependency, letting an agent loose), keep it inside
+the VM. The reason this VM exists is so that those operations don't
+touch the host directly; the share doesn't change that contract, but
+how you treat the share on the host either preserves it or breaks it.
+
 ## Claude Code
 
 The VM ships with [Claude Code](https://docs.claude.com/en/docs/claude-code)
@@ -224,6 +253,16 @@ signing key.
 - Investigate replacing the 9p `cache=loose` share with virtiofs (and
   POSIX-lock pass-through), which would give host + multiple VMs a coherent
   view of `~/koski-share/` and make concurrent access safer.
+- Reduce reliance on the broad host↔VM share. Today every outbound flow
+  from the VM (commits, file edits, build artifacts) goes through the
+  same wide-open share, which is also the sandbox-escape vector
+  described in the warning above. Replace as many of those flows as
+  possible with narrower, explicit, time-limited mechanisms — scoped
+  tokens for specific operations, an RPC bridge over vsock that
+  authorizes individual requests, or an outbound proxy that handles
+  signing-and-push without exposing the host filesystem. Goal: the
+  share is for genuinely shared dev state, not for "the VM needs to do
+  anything outside itself."
 - Investigate, if there is a way to get IntelliJ IDEA working with HW acceleration in MacOS
 UTM hosted VM
 - Figure out the recommended way to create signed commits and push to GitHub
