@@ -1,0 +1,35 @@
+name: Build seed images
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build ${{ matrix.arch }} seed image
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: aarch64
+            runs-on: ubuntu-24.04-arm
+          - arch: x86_64
+            runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: cachix/install-nix-action@ab739621df7a23f52766f9ccc97f38da6b7af14f # v31.10.5
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Build compressed seed image
+        run: nix build .#packages.${{ matrix.arch }}-linux.compressedImage --impure -L
+
+      - name: Stage artifact with descriptive filename
+        run: cp -L result koski-sandbox-${{ matrix.arch }}.qcow2
+
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: koski-sandbox-${{ matrix.arch }}
+          path: koski-sandbox-${{ matrix.arch }}.qcow2
+          if-no-files-found: error
