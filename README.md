@@ -229,6 +229,19 @@ ownership, so files appear as the VM user regardless of host uid/gid (501
      `-gl`). All apps lose host GL acceleration — noticeably slower
      overall — but rendering everywhere becomes correct. Use this if
      other Java/Skia apps misrender too.
+- **Markdown preview pane (e.g. opening `README.md`) shows a black
+  screen** even after the splash/EULA workaround above: the preview is
+  rendered by JCEF (embedded Chromium), which has its own GPU pipeline
+  not covered by the Java2D flags. Add to the same `idea64.vmoptions`
+  file as above:
+
+  ```
+  -Dide.browser.jcef.gpu.disable=true
+  -Dide.browser.jcef.gpu.infoCollection.disabled=true
+  ```
+
+  Restart IDEA. JCEF then software-rasterizes the preview — slightly
+  slower but renders correctly.
 - **"The password you use to log in to your computer no longer matches
   that of your login keyring"** (e.g. when launching Chromium): GDM
   auto-creates the GNOME login keyring on first login, encrypted with
