@@ -281,6 +281,14 @@ Lima/Tart VM, or CI).
   terminal, but SPICE/UTM clipboard sharing typically only forwards text, so
   today you'd have to save the image to `~/koski-share/` on the host and
   reference it by path from inside the VM).
+- Consider running an SSH server in the VM so users can `ssh` in from a
+  host terminal (better paste/scrollback/tmux story than the UTM console).
+    - If added, revisit the seed's default `changeme` password: shipping a
+      known password on a service that's reachable from the host (and any
+      forwarded port) is a much bigger footgun than on the local console.
+      Options: force `passwd` before sshd starts, disable password auth and
+      require a key dropped on the share, or only listen on a vsock/loopback
+      transport that isn't exposed beyond the host.
 
 ## Technical notes
 
