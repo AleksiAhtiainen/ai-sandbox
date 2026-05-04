@@ -17,6 +17,16 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
+      - name: Inspect KVM on runner
+        run: |
+          echo "uname: $(uname -a)"
+          if [ -e /dev/kvm ]; then
+            ls -la /dev/kvm
+            [ -r /dev/kvm ] && echo "/dev/kvm IS readable" || echo "/dev/kvm NOT readable"
+          else
+            echo "/dev/kvm does not exist"
+          fi
+
       - uses: cachix/install-nix-action@ab739621df7a23f52766f9ccc97f38da6b7af14f # v31.10.5
         with:
           extra_nix_config: |
