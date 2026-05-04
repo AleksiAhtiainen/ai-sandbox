@@ -15,8 +15,11 @@ git clone git@github.com:Opetushallitus/koski-sandbox.git \
 #   - use that qcow2 as the existing disk
 #   - add a 9p / VirtFS share named exactly `share` → ~/koski-share
 #   - ≥ 16 GB RAM (more is better in practice), ≥ 4 cores
-# Boot, wait ~1–2 min for first-boot personalization, log in as your host
-# username (password: changeme), then run `passwd`.
+# Boot and wait for first-boot personalization to finish — it sets the
+# host username and then runs nixos-rebuild to fetch IDEA and Claude Code
+# from the nixpkgs binary cache (kept out of the seed for licensing
+# reasons), so the first boot is bandwidth-bound. Then log in as your
+# host username (password: changeme) and run `passwd`.
 
 # Inside the VM (one-time, after first boot): make a VM-writable clone
 # from the host-writable one, with the cross-clone remote named `host`:
@@ -157,6 +160,36 @@ For x86_64 the same command on an Intel-Linux NixOS environment, with
 Distribute the resulting qcow2 to the team via shared storage. CI builds
 are out of scope for now (planned follow-up).
 
+### Adding packages — what goes in the seed
+
+`flake.nix` splits modules into `seedModules` (baked into the public
+qcow2) and `postSeedModules` (added by the user's first-boot
+`nixos-rebuild`). Two reasons to keep something out of the seed:
+
+1. **Licensing**: anything in `seedModules` is being publicly
+   redistributed via the seed, so non-redistributable packages must not
+   go there. `modules/idea.nix` (IntelliJ IDEA Ultimate) and
+   `modules/claude.nix` (Claude Code) live in `postSeedModules` for this
+   reason — the user's machine fetches them from the nixpkgs binary
+   cache on first boot, so the redistribution relationship is between
+   the user and the upstream vendor.
+2. **Size**: every package in the seed inflates the qcow2 we distribute
+   and the time it takes to build (manually or in CI) and download.
+   Heavy dev tooling that the seed itself doesn't need (JDK, Maven,
+   Node, Chromium, …) lives in `modules/dev-tools.nix` in
+   `postSeedModules` — the user fetches the dev stack from the nixpkgs
+   binary cache on first boot.
+
+Quick check when adding a new package: if it builds without
+`nixpkgs.config.allowUnfree = true`, it's licensing-safe for
+`seedModules`. If it needs `allowUnfree`, query its license metadata
+(`nix eval --json nixpkgs#<pkg>.meta.license`) and read the actual
+upstream terms — SPDX-level `redistributable = true` doesn't catch
+contractual restrictions like JetBrains' subscription agreement (§3.5(d)
+prohibits providing the IDE Product to third parties). For
+licensing-safe but heavy packages, put them in `dev-tools.nix`. When
+unsure, put the package in `postSeedModules`.
+
 ## Git config
 
 Drop a `.gitconfig` on the share to give git an identity inside the VM:
@@ -198,7 +231,9 @@ UTM hosted VM
   vsock/TCP bridge, or a per-VM signing key registered with GitHub). Until
   then, sign and push from the host as described above.
 - GitHub Actions matrix building qcow2 for both arches and uploading to Releases (replaces
-the manual seed handoff).
+the manual seed handoff). The seed itself no longer bundles IntelliJ IDEA or Claude Code
+— those land on first boot via `nixos-rebuild switch` against the in-image flake — so the
+public qcow2 is license-clean to ship via GitHub Releases.
 - Bootstrap path for users who don't yet have any NixOS VM and need to build a seed from
 scratch on macOS (would bring back something like nix-darwin linux-builder, or a temporary
 Lima/Tart VM, or CI).

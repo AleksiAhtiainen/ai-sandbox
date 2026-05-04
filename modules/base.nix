@@ -1,4 +1,4 @@
-{ pkgs, unstablePkgs, ... }:
+{ pkgs, ... }:
 
 {
   networking.networkmanager.enable = true;
@@ -30,15 +30,7 @@
     wget
     git
     spice-vdagent
-    chromium
-    jdk17
-    (maven.override { jdk_headless = jdk17; })
-    gnumake
-    nodejs_24
-    pnpm
     docker-compose
-    unstablePkgs.jetbrains.idea  # IU 2026.1 from nixos-unstable; needs UTM display set to virtio-gpu-pci (no -gl) to render properly
-    # jetbrains-toolbox
   ];
 
   virtualisation.docker.enable = true;

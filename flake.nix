@@ -15,7 +15,7 @@
       systems = [ "aarch64-linux" "x86_64-linux" ];
       forAllSystems = nixpkgs.lib.genAttrs systems;
 
-      commonModules = [
+      seedModules = [
         ./modules/base.nix
         ./modules/desktop.nix
         ./modules/spice.nix
@@ -23,10 +23,21 @@
         ./modules/user.nix
         ./modules/firstboot.nix
         ./modules/vm.nix
-        ./modules/claude.nix
         ./modules/git.nix
-        ./modules/idea.nix
         ./modules/fish.nix
+      ];
+
+      # Added only on the user's first nixos-rebuild — kept out of the seed
+      # qcow2 for two reasons: (1) idea.nix and claude.nix carry binaries
+      # whose licenses don't allow redistribution through the public seed,
+      # and (2) dev-tools.nix is heavy and the seed doesn't need it, so
+      # excluding it keeps the published qcow2 small. The user's own
+      # machine fetches everything from the nixpkgs binary cache on first
+      # boot.
+      postSeedModules = [
+        ./modules/claude.nix
+        ./modules/idea.nix
+        ./modules/dev-tools.nix
       ];
 
       mkSpecialArgs = system: {
@@ -44,7 +55,7 @@
             inherit system;
             specialArgs = mkSpecialArgs system;
             format = "qcow-efi";
-            modules = commonModules;
+            modules = seedModules;
           };
         in {
           inherit image;
@@ -59,7 +70,7 @@
           nixpkgs.lib.nixosSystem {
             inherit system;
             specialArgs = mkSpecialArgs system;
-            modules = commonModules;
+            modules = seedModules ++ postSeedModules;
           });
     };
 }
