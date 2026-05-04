@@ -92,6 +92,26 @@ The 9p file sharing has no lock manager and uses `cache=loose`. Two VMs
 writing to the same `/mnt/share/claude/<user>/` give last-writer-wins on
 every file, with stale-cache reads on top.
 
+## Fish shell (optional)
+
+[Fish](https://fishshell.com/) is installed but not the default login
+shell. To opt in:
+
+```sh
+# On the host (one-time): create the shared fish config dir. The VM
+# symlinks ~/.config/fish to it on next boot, so anything you drop in
+# here (config.fish, functions/, completions/, conf.d/) is picked up.
+mkdir -p ~/koski-share/fish_config
+
+# In the VM: make fish your default login shell, then log out and back in.
+chsh -s "$(which fish)"
+```
+
+If `~/koski-share/fish_config` doesn't exist, the symlink isn't created
+and any local `~/.config/fish` is left untouched. Fish state lives on the
+share, so it survives `nixos-rebuild` and recreating the VM — the same
+single-writer caveat as `/mnt/share/claude/<user>/` applies.
+
 ## Maintainer setup (building the seed)
 
 This is the one-time bootstrap. Run inside any NixOS environment matching

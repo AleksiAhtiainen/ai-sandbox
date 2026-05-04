@@ -26,6 +26,7 @@
         ./modules/claude.nix
         ./modules/git.nix
         ./modules/idea.nix
+        ./modules/fish.nix
       ];
 
       mkSpecialArgs = system: {
