@@ -81,11 +81,9 @@ sudo nixos-rebuild switch --flake .#sandbox-$(uname -m)-linux --impure
 sync
 
 # On the host: fetch the VM's commits and review them before re-signing.
-# `git log main..vm/main` shows exactly what cherry-pick is about to
-# replay; `--stat` adds the diffstat, drop it for a leaner view.
 cd ~/koski-share/koski-sandbox-host
 git fetch vm main
-git log --stat main..vm/main
+git log -p --stat main..vm/main
 
 # Then re-sign each commit with the host's key and push to GitHub:
 git cherry-pick -S main..vm/main
