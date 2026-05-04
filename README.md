@@ -142,8 +142,8 @@ aarch64 seed.
 
 ```sh
 cd ~/koski-share/koski-sandbox-host   # or wherever you have it cloned
-nix build .#packages.aarch64-linux.image --impure -L
-cp -L result/nixos.qcow2 /mnt/share/koski-sandbox-aarch64.qcow2
+nix build .#packages.aarch64-linux.compressedImage --impure -L
+cp -L result /mnt/share/koski-sandbox-aarch64.qcow2
 ```
 
 `--impure` is needed because `modules/user.nix` reads
@@ -152,7 +152,7 @@ cp -L result/nixos.qcow2 /mnt/share/koski-sandbox-aarch64.qcow2
 teammate's first boot from `/mnt/share/.host-username`.
 
 For x86_64 the same command on an Intel-Linux NixOS environment, with
-`packages.x86_64-linux.image`.
+`packages.x86_64-linux.compressedImage`.
 
 Distribute the resulting qcow2 to the team via shared storage. CI builds
 are out of scope for now (planned follow-up).

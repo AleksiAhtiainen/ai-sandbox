@@ -37,14 +37,21 @@
         };
       };
     in {
-      packages = forAllSystems (system: {
-        image = nixos-generators.nixosGenerate {
-          inherit system;
-          specialArgs = mkSpecialArgs system;
-          format = "qcow-efi";
-          modules = commonModules;
-        };
-      });
+      packages = forAllSystems (system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+          image = nixos-generators.nixosGenerate {
+            inherit system;
+            specialArgs = mkSpecialArgs system;
+            format = "qcow-efi";
+            modules = commonModules;
+          };
+        in {
+          inherit image;
+          compressedImage = pkgs.runCommand "nixos-compressed.qcow2"
+            { nativeBuildInputs = [ pkgs.qemu-utils ]; }
+            ''qemu-img convert -c -O qcow2 ${image}/nixos.qcow2 $out'';
+        });
 
       nixosConfigurations = nixpkgs.lib.genAttrs (map (s: "sandbox-${s}") systems)
         (name:
