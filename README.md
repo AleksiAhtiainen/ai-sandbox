@@ -98,6 +98,23 @@ sync && sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'
 git -C /mnt/share/koski-sandbox-vm pull host main
 ```
 
+## What lives on the share
+
+`~/koski-share/` on the host (= `/mnt/share/` in the VM) holds everything
+the sandbox needs to persist across rebuilds and reboots, plus the
+conduits between host and VM. Inventory (paths in VM view):
+
+| Path | Writer | Purpose |
+| ---- | ------ | ------- |
+| `.host-username` | host | One line with the host username. Read once by `koski-firstboot.service` to provision the VM user. Required. |
+| `.gitconfig` | host | Optional VM git identity. See [Git config](#git-config). |
+| `idea64.vmoptions` | host | Optional IDEA JVM flags; `IDEA_VM_OPTIONS` is set to this path system-wide. See [Troubleshooting](#troubleshooting) for the flags that fix UTM rendering on Apple Silicon. |
+| `claude/<username>/` | VM | Claude Code state. See [Where Claude state lives](#where-claude-state-lives). |
+| `fish_config/` | host (creates), VM (writes state) | Optional Fish config. See [Fish shell (optional)](#fish-shell-optional). |
+| `koski-sandbox-host/` | host | Host-writable clone of this repo; the only side that pushes to GitHub. |
+| `koski-sandbox-vm/` | VM | VM-writable clone of this repo; the side `nixos-rebuild` runs against. See the topology table above for the cross-clone remotes. |
+| `koski-sandbox-<arch>.qcow2[.gz]` | maintainer | Seed image(s) staged here by `nix build` for distribution to the team. Not required on user machines. |
+
 ## ⚠ The share is the way out of the sandbox
 
 `~/koski-share` is the only conduit between the VM and the host, and on
