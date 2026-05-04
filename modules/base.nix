@@ -46,6 +46,7 @@
   programs.nix-ld.enable = true;
 
   system.activationScripts.binbash = ''
+    mkdir -p /bin
     ln -sfn ${pkgs.bashInteractive}/bin/bash /bin/bash
   '';
 
