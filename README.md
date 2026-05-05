@@ -377,7 +377,7 @@ ownership, so files appear as the VM user regardless of host uid/gid (501
   bindfs layer mounted — `mount | grep fuse.bindfs` should show
   `/mnt/share`. If only `/run/koskishare` is mounted, the bindfs unit
   failed; `journalctl -u mnt-share.mount` shows why.
-- **JetBrains IDE (IDEA, Toolbox, …) shows a corrupted splash / EULA
+- **IntelliJ IDEA shows a corrupted splash / EULA
   dialog**: the default UTM display device on Apple Silicon
   (`virtio-gpu-gl-pci`) mangles the framebuffer for JetBrains'
   Skia/JBR renderer. Two workarounds, lighter first:
@@ -405,7 +405,7 @@ ownership, so files appear as the VM user regardless of host uid/gid (501
      `-gl`). All apps lose host GL acceleration — noticeably slower
      overall — but rendering everywhere becomes correct. Use this if
      other Java/Skia apps misrender too.
-- **Markdown preview pane (e.g. opening `README.md`) shows a black
+- **IntelliJ IDEA Markdown preview pane (e.g. opening `README.md`) shows a black
   screen** even after the splash/EULA workaround above: the preview is
   rendered by JCEF (embedded Chromium), which has its own GPU pipeline
   not covered by the Java2D flags. Append to the same
