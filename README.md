@@ -4,36 +4,36 @@ Reusable, team-shareable NixOS VM image for the Koski sandbox.
 
 ## How to start
 
-```sh
-# On the host (one-time setup):
-mkdir -p ~/koski-share
-echo "$USER" > ~/koski-share/.host-username
-git clone git@github.com:Opetushallitus/koski-sandbox.git \
-  ~/koski-share/koski-sandbox-host
+   ```sh
+   # On the host (one-time setup):
+   mkdir -p ~/koski-share
+   echo "$USER" > ~/koski-share/.host-username
+   git clone git@github.com:Opetushallitus/koski-sandbox.git \
+     ~/koski-share/koski-sandbox-host
 
-# Grab koski-sandbox-<arch>.qcow2 from team storage. Create a VM with it:
-#   - use that qcow2 as the existing disk
-#   - add a 9p / VirtFS share named exactly `share` → ~/koski-share
-#   - ≥ 16 GB RAM (more is better in practice), ≥ 4 cores
-# Boot and wait for first-boot personalization to finish — the seed
-# comes up to a text console on tty1, sets the host username, then runs
-# nixos-rebuild to fetch the GUI stack, IDEA, Claude Code, and the dev
-# tools (kept out of the seed for licensing and size reasons), and
-# reboots into GNOME. The first boot is bandwidth-bound. Then log in
-# as your host username (password: changeme) and run `passwd`.
+   # Grab koski-sandbox-<arch>.qcow2 from team storage. Create a VM with it:
+   #   - use that qcow2 as the existing disk
+   #   - add a 9p / VirtFS share named exactly `share` → ~/koski-share
+   #   - ≥ 16 GB RAM (more is better in practice), ≥ 4 cores
+   # Boot and wait for first-boot personalization to finish — the seed
+   # comes up to a text console on tty1, sets the host username, then runs
+   # nixos-rebuild to fetch the GUI stack, IDEA, Claude Code, and the dev
+   # tools (kept out of the seed for licensing and size reasons), and
+   # reboots into GNOME. The first boot is bandwidth-bound. Then log in
+   # as your host username (password: changeme) and run `passwd`.
 
-# Inside the VM (one-time, after first boot): make a VM-writable clone
-# from the host-writable one, with the cross-clone remote named `host`:
-git -c clone.defaultRemoteName=host clone \
-  /mnt/share/koski-sandbox-host /mnt/share/koski-sandbox-vm
-cd /mnt/share/koski-sandbox-vm
-sudo nixos-rebuild switch --flake .#sandbox-$(uname -m)-linux --impure
+   # Inside the VM (one-time, after first boot): make a VM-writable clone
+   # from the host-writable one, with the cross-clone remote named `host`:
+   git -c clone.defaultRemoteName=host clone \
+     /mnt/share/koski-sandbox-host /mnt/share/koski-sandbox-vm
+   cd /mnt/share/koski-sandbox-vm
+   sudo nixos-rebuild switch --flake .#sandbox-$(uname -m)-linux --impure
 
-# Optional, on the host: add the VM clone as a remote named `vm`, so the
-# host can pull VM-side changes (e.g. flake.lock bumps) back out:
-git -C ~/koski-share/koski-sandbox-host remote add vm \
-  ../koski-sandbox-vm
-```
+   # Optional, on the host: add the VM clone as a remote named `vm`, so the
+   # host can pull VM-side changes (e.g. flake.lock bumps) back out:
+   git -C ~/koski-share/koski-sandbox-host remote add vm \
+     ../koski-sandbox-vm
+   ```
 
 The share now holds two sibling clones of this repo, one per writer:
 
@@ -50,47 +50,47 @@ host, since the VM has no credentials.
 
 ### Keeping the VM up to date
 
-```sh
-# On the host: pull the latest config from GitHub into the host-writable
-# clone (the VM has no credentials, so this can't happen in the VM):
-git -C ~/koski-share/koski-sandbox-host pull
+   ```sh
+   # On the host: pull the latest config from GitHub into the host-writable
+   # clone (the VM has no credentials, so this can't happen in the VM):
+   git -C ~/koski-share/koski-sandbox-host pull
 
-# In the VM: pull from the host-writable clone:
-cd /mnt/share/koski-sandbox-vm
-git pull host main
+   # In the VM: pull from the host-writable clone:
+   cd /mnt/share/koski-sandbox-vm
+   git pull host main
 
-# Bump pinned nixpkgs package versions yourself (weekly-ish). This writes
-# the new flake.lock into the VM dir — publish it back to GitHub via the
-# host with the steps below.
-nix flake update nixpkgs
+   # Bump pinned nixpkgs package versions yourself (weekly-ish). This writes
+   # the new flake.lock into the VM dir — publish it back to GitHub via the
+   # host with the steps below.
+   nix flake update nixpkgs
 
-# To update only the unstable input (claude-code, IntelliJ IDEA, …):
-nix flake update unstable
+   # To update only the unstable input (claude-code, IntelliJ IDEA, …):
+   nix flake update unstable
 
-# Commit the resulting flake.lock changes, if required
-git add ...
-git commit ...
+   # Commit the resulting flake.lock changes, if required
+   git add ...
+   git commit ...
 
-# Apply changes — run after any of the above:
-sudo nixos-rebuild switch --flake .#sandbox-$(uname -m)-linux --impure
+   # Apply changes — run after any of the above:
+   sudo nixos-rebuild switch --flake .#sandbox-$(uname -m)-linux --impure
 
-# Publish VM-side commits (flake.lock bumps, config tweaks) back to
-# GitHub. The VM has no GitHub credentials and no signing key, so
-# re-signing and pushing must happen on the host.
+   # Publish VM-side commits (flake.lock bumps, config tweaks) back to
+   # GitHub. The VM has no GitHub credentials and no signing key, so
+   # re-signing and pushing must happen on the host.
 
-# On the host: fetch the VM's commits and review them before re-signing.
-cd ~/koski-share/koski-sandbox-host
-git fetch vm main
-git log -p --stat main..vm/main
+   # On the host: fetch the VM's commits and review them before re-signing.
+   cd ~/koski-share/koski-sandbox-host
+   git fetch vm main
+   git log -p --stat main..vm/main
 
-# Then re-sign each commit with the host's key and push to GitHub:
-git cherry-pick -S main..vm/main
-git push origin
+   # Then re-sign each commit with the host's key and push to GitHub:
+   git cherry-pick -S main..vm/main
+   git push origin
 
-# Back in the VM: pull so the VM tracks the now-signed published history
-# (and so its `main` matches `origin/main`):
-git -C /mnt/share/koski-sandbox-vm pull host main
-```
+   # Back in the VM: pull so the VM tracks the now-signed published history
+   # (and so its `main` matches `origin/main`):
+   git -C /mnt/share/koski-sandbox-vm pull host main
+   ```
 
 ## What lives on the share
 
@@ -164,14 +164,14 @@ The 9p file sharing has no lock manager. Two VMs writing to the same
 
 Drop a `.gitconfig` on the share to give git an identity inside the VM:
 
-```sh
-# On the host:
-cat > ~/koski-share/.gitconfig <<'EOF'
-[user]
-  name = Your Name
-  email = you@example.com
-EOF
-```
+   ```sh
+   # On the host:
+   cat > ~/koski-share/.gitconfig <<'EOF'
+   [user]
+     name = Your Name
+     email = you@example.com
+   EOF
+   ```
 
 **Don't symlink your host's real `~/.gitconfig` into `~/koski-share/`.** Use a
 VM-specific copy. The host config typically references things that don't make
@@ -193,15 +193,15 @@ signing key.
 [Fish](https://fishshell.com/) is installed but not the default login
 shell. To opt in:
 
-```sh
-# On the host (one-time): create the shared fish config dir. The VM
-# symlinks ~/.config/fish to it on next boot, so anything you drop in
-# here (config.fish, functions/, completions/, conf.d/) is picked up.
-mkdir -p ~/koski-share/fish_config
+   ```sh
+   # On the host (one-time): create the shared fish config dir. The VM
+   # symlinks ~/.config/fish to it on next boot, so anything you drop in
+   # here (config.fish, functions/, completions/, conf.d/) is picked up.
+   mkdir -p ~/koski-share/fish_config
 
-# In the VM: make fish your default login shell, then log out and back in.
-chsh -s "$(which fish)"
-```
+   # In the VM: make fish your default login shell, then log out and back in.
+   chsh -s "$(which fish)"
+   ```
 
 If `~/koski-share/fish_config` doesn't exist, the symlink isn't created
 and any local `~/.config/fish` is left untouched. Fish state lives on the
@@ -221,12 +221,12 @@ This is the one-time bootstrap. Run inside any NixOS environment matching
 the target architecture — your existing UTM NixOS VM works for the
 aarch64 seed.
 
-```sh
-cd ~/koski-share/koski-sandbox-host   # or wherever you have it cloned
-arch=$(uname -m)
-nix build .#packages.$arch-linux.compressedImage --impure -L
-cp -L result /mnt/share/koski-sandbox-$arch.qcow2
-```
+   ```sh
+   cd ~/koski-share/koski-sandbox-host   # or wherever you have it cloned
+   arch=$(uname -m)
+   nix build .#packages.$arch-linux.compressedImage --impure -L
+   cp -L result /mnt/share/koski-sandbox-$arch.qcow2
+   ```
 
 `--impure` is needed because `modules/user.nix` reads
 `/etc/koski-sandbox-username` at evaluation time (with a safe fallback to
@@ -259,11 +259,11 @@ For machines where the long first-boot download is inconvenient, build
 a full image that bakes `postSeedModules` (GUI stack, IntelliJ IDEA,
 Claude Code, dev tools) into the qcow2:
 
-```sh
-cd ~/koski-share/koski-sandbox-host
-nix build .#packages.$(uname -m)-linux.compressedFullImage --impure -L
-cp -L result /mnt/share/koski-sandbox-full-image-$(uname -m).qcow2
-```
+   ```sh
+   cd ~/koski-share/koski-sandbox-host
+   nix build .#packages.$(uname -m)-linux.compressedFullImage --impure -L
+   cp -L result /mnt/share/koski-sandbox-full-image-$(uname -m).qcow2
+   ```
 
 Use the resulting qcow2 the same way as the public seed (see
 [How to start](#how-to-start)). First boot still personalizes the
