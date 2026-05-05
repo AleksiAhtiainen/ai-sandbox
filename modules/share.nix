@@ -4,13 +4,18 @@
   # Raw 9p share. Files appear with whatever uid/gid the host exposes
   # (e.g. 501/20 on macOS). Mounted to a non-user-facing path so the
   # bindfs layer below is the canonical /mnt/share.
+  #
+  # cache=none: every read/write hits the host immediately, so changes
+  # made on either side are visible on the other without delay. Slower
+  # than cache=loose for repeated reads but matches user expectation
+  # of a shared directory.
   fileSystems."/run/koskishare" = {
     device = "share";
     fsType = "9p";
     options = [
       "trans=virtio"
       "version=9p2000.L"
-      "cache=loose"
+      "cache=none"
       "msize=262144"
       "access=any"
       "rw"
@@ -24,6 +29,10 @@
   # gid 100), so files on the share are usable without chown regardless
   # of what the host filesystem reports. Writes from the VM appear on
   # the host as the host user (the QEMU process owner).
+  #
+  # *_timeout=0: disable FUSE attr/dentry caching so host-side changes
+  # show up immediately in the VM (otherwise stat() can return cached
+  # metadata for up to a second after the underlying file changed).
   fileSystems."/mnt/share" = {
     device = "/run/koskishare";
     fsType = "fuse.bindfs";
@@ -32,6 +41,9 @@
       "force-group=100"
       "create-for-user=1000"
       "create-for-group=100"
+      "attr_timeout=0"
+      "entry_timeout=0"
+      "negative_timeout=0"
       "nofail"
       "x-systemd.requires-mounts-for=/run/koskishare"
       "x-systemd.automount"
