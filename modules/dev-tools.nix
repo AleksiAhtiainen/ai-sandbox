@@ -3,6 +3,7 @@
 {
   environment.systemPackages = with pkgs; [
     chromium
+    docker-compose
     jdk17
     (maven.override { jdk_headless = jdk17; })
     gnumake

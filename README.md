@@ -15,11 +15,12 @@ git clone git@github.com:Opetushallitus/koski-sandbox.git \
 #   - use that qcow2 as the existing disk
 #   - add a 9p / VirtFS share named exactly `share` → ~/koski-share
 #   - ≥ 16 GB RAM (more is better in practice), ≥ 4 cores
-# Boot and wait for first-boot personalization to finish — it sets the
-# host username and then runs nixos-rebuild to fetch IDEA and Claude Code
-# from the nixpkgs binary cache (kept out of the seed for licensing
-# reasons), so the first boot is bandwidth-bound. Then log in as your
-# host username (password: changeme) and run `passwd`.
+# Boot and wait for first-boot personalization to finish — the seed
+# comes up to a text console on tty1, sets the host username, then runs
+# nixos-rebuild to fetch the GUI stack, IDEA, Claude Code, and the dev
+# tools (kept out of the seed for licensing and size reasons), and
+# reboots into GNOME. The first boot is bandwidth-bound. Then log in
+# as your host username (password: changeme) and run `passwd`.
 
 # Inside the VM (one-time, after first boot): make a VM-writable clone
 # from the host-writable one, with the cross-clone remote named `host`:
@@ -265,10 +266,12 @@ qcow2) and `postSeedModules` (added by the user's first-boot
    the user and the upstream vendor.
 2. **Size**: every package in the seed inflates the qcow2 we distribute
    and the time it takes to build (manually or in CI) and download.
-   Heavy dev tooling that the seed itself doesn't need (JDK, Maven,
-   Node, Chromium, …) lives in `modules/dev-tools.nix` in
-   `postSeedModules` — the user fetches the dev stack from the nixpkgs
-   binary cache on first boot.
+   The GUI stack (`modules/desktop.nix` — GNOME/GDM/Firefox — plus its
+   `modules/spice.nix` autostart) and heavy dev tooling (JDK, Maven,
+   Node, Chromium, docker-compose, … in `modules/dev-tools.nix`) live
+   in `postSeedModules` for this reason: the seed boots to a text
+   console, runs `koski-firstboot`, and fetches all of it from the
+   nixpkgs binary cache on first boot.
 
 Quick check when adding a new package: if it builds without
 `nixpkgs.config.allowUnfree = true`, it's licensing-safe for

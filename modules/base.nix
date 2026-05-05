@@ -18,7 +18,7 @@
     LC_TIME = "fi_FI.UTF-8";
   };
 
-  programs.firefox.enable = true;
+  console.keyMap = "fi";
 
   nixpkgs.config.allowUnfree = true;
 
@@ -30,7 +30,6 @@
     wget
     git
     spice-vdagent
-    docker-compose
   ];
 
   virtualisation.docker.enable = true;

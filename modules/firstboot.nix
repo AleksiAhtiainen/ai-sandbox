@@ -39,7 +39,8 @@ in
     description = "Personalize VM with host username on first boot";
     after = [ "mnt-share.mount" "network-online.target" ];
     wants = [ "mnt-share.mount" "network-online.target" ];
-    before = [ "display-manager.service" ];
+    before = [ "getty@tty1.service" "display-manager.service" ];
+    conflicts = [ "getty@tty1.service" ];
     wantedBy = [ "multi-user.target" ];
     unitConfig.ConditionPathExists = "!/etc/koski-sandbox-username";
     serviceConfig = {

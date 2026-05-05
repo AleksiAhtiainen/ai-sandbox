@@ -17,8 +17,6 @@
 
       seedModules = [
         ./modules/base.nix
-        ./modules/desktop.nix
-        ./modules/spice.nix
         ./modules/share.nix
         ./modules/user.nix
         ./modules/firstboot.nix
@@ -30,11 +28,13 @@
       # Added only on the user's first nixos-rebuild — kept out of the seed
       # qcow2 for two reasons: (1) idea.nix and claude.nix carry binaries
       # whose licenses don't allow redistribution through the public seed,
-      # and (2) dev-tools.nix is heavy and the seed doesn't need it, so
-      # excluding it keeps the published qcow2 small. The user's own
-      # machine fetches everything from the nixpkgs binary cache on first
-      # boot.
+      # and (2) the GUI stack and dev-tools.nix are heavy and the seed
+      # itself doesn't need them, so excluding them keeps the published
+      # qcow2 small. The user's own machine fetches everything from the
+      # nixpkgs binary cache on first boot.
       postSeedModules = [
+        ./modules/desktop.nix
+        ./modules/spice.nix
         ./modules/claude.nix
         ./modules/idea.nix
         ./modules/dev-tools.nix

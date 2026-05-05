@@ -10,7 +10,7 @@
     variant = "mac";
   };
 
-  console.keyMap = "fi";
+  programs.firefox.enable = true;
 
   programs.dconf.profiles.user.databases = [
     {
