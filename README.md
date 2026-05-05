@@ -215,6 +215,13 @@ and any local `~/.config/fish` is left untouched. Fish state lives on the
 share, so it survives `nixos-rebuild` and recreating the VM — the same
 single-writer caveat as `/mnt/share/claude/<user>/` applies.
 
+## Development tools
+
+Stable symlinks to JDK installs live under `/etc/jdks/` (e.g.
+`/etc/jdks/jdk17`), so IDEA's *File → Project Structure → SDKs* can
+point at a path that survives `nixos-rebuild` — the underlying Nix
+store path changes on every rebuild.
+
 ## Maintainer setup (building the seed)
 
 This is the one-time bootstrap. Run inside any NixOS environment matching
