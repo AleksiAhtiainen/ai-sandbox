@@ -39,12 +39,18 @@ in
     description = "Personalize VM with host username on first boot";
     after = [ "mnt-share.mount" "network-online.target" ];
     wants = [ "mnt-share.mount" "network-online.target" ];
+    before = [ "display-manager.service" ];
     wantedBy = [ "multi-user.target" ];
     unitConfig.ConditionPathExists = "!/etc/koski-sandbox-username";
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
       ExecStart = "${script}/bin/koski-firstboot";
+      StandardOutput = "tty";
+      StandardError = "tty";
+      TTYPath = "/dev/tty1";
+      TTYReset = true;
+      TTYVHangup = true;
     };
   };
 }
