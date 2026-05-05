@@ -15,12 +15,20 @@ Reusable, team-shareable NixOS VM image for the Koski sandbox.
    #   - use that qcow2 as the existing disk
    #   - add a 9p / VirtFS share named exactly `share` → ~/koski-share
    #   - ≥ 16 GB RAM (more is better in practice), ≥ 4 cores
+   #   - Add large enough disk (at least 128 GBish, if planning to build
+   #     the NixOS images in the VM
+   #
    # Boot and wait for first-boot personalization to finish — the seed
    # comes up to a text console on tty1, sets the host username, then runs
    # nixos-rebuild to fetch the GUI stack, IDEA, Claude Code, and the dev
    # tools (kept out of the seed for licensing and size reasons), and
-   # reboots into GNOME. The first boot is bandwidth-bound. Then log in
-   # as your host username (password: changeme) and run `passwd`.
+   # reboots into GNOME.
+   # 
+   # The first boot is bandwidth-bound: there is over 10GB of data to download.
+   # Then log in as your
+   #   host username
+   #   (password: changeme)
+   # and run `passwd` to set a real password.
 
    # Inside the VM (one-time, after first boot): make a VM-writable clone
    # from the host-writable one, with the cross-clone remote named `host`:
@@ -42,11 +50,8 @@ The share now holds two sibling clones of this repo, one per writer:
 | `/mnt/share/koski-sandbox-host` | host only  | GitHub + `vm` → VM dir             |
 | `/mnt/share/koski-sandbox-vm`   | VM only    | `host` → host dir                  |
 
-Each side only ever **pulls** from the other; neither side ever pushes
-into the other dir. That keeps the "single writer per file" invariant
-that 9p needs — there is no lock manager, so concurrent writers corrupt
-refs and the index. Pushing to GitHub is fine — but do it only from the
-host, since the VM has no credentials.
+The idea of this split is that repos can pull or push data from each other, and
+it is also possible to sign commits on the host before pushing to remote repo.
 
 ### Keeping the VM up to date
 
@@ -76,7 +81,7 @@ host, since the VM has no credentials.
 
    # Publish VM-side commits (flake.lock bumps, config tweaks) back to
    # GitHub. The VM has no GitHub credentials and no signing key, so
-   # re-signing and pushing must happen on the host.
+   # re-signing and pushing must happen on the host:
 
    # On the host: fetch the VM's commits and review them before re-signing.
    cd ~/koski-share/koski-sandbox-host
