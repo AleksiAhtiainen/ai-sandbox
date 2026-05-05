@@ -43,9 +43,9 @@ The share now holds two sibling clones of this repo, one per writer:
 
 Each side only ever **pulls** from the other; neither side ever pushes
 into the other dir. That keeps the "single writer per file" invariant
-that the 9p `cache=loose` share needs (no lock manager → concurrent
-writers corrupt refs and the index). Pushing to GitHub is fine — but do
-it only from the host, since the VM has no credentials.
+that 9p needs — there is no lock manager, so concurrent writers corrupt
+refs and the index. Pushing to GitHub is fine — but do it only from the
+host, since the VM has no credentials.
 
 ### Keeping the VM up to date
 
@@ -54,10 +54,7 @@ it only from the host, since the VM has no credentials.
 # clone (the VM has no credentials, so this can't happen in the VM):
 git -C ~/koski-share/koski-sandbox-host pull
 
-# In the VM: drop stale 9p caches first so the host's new commits are
-# visible (cache=loose doesn't revalidate against the host on its own),
-# then pull from the host-writable clone:
-sync && sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'
+# In the VM: pull from the host-writable clone:
 cd /mnt/share/koski-sandbox-vm
 git pull host main
 
@@ -80,9 +77,6 @@ sudo nixos-rebuild switch --flake .#sandbox-$(uname -m)-linux --impure
 # GitHub. The VM has no GitHub credentials and no signing key, so
 # re-signing and pushing must happen on the host.
 
-# In the VM: flush writes through 9p so the host can see the new commits:
-sync
-
 # On the host: fetch the VM's commits and review them before re-signing.
 cd ~/koski-share/koski-sandbox-host
 git fetch vm main
@@ -92,9 +86,8 @@ git log -p --stat main..vm/main
 git cherry-pick -S main..vm/main
 git push origin
 
-# Back in the VM: drop caches and pull so the VM tracks the now-signed
-# published history (and so its `main` matches `origin/main`):
-sync && sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'
+# Back in the VM: pull so the VM tracks the now-signed published history
+# (and so its `main` matches `origin/main`):
 git -C /mnt/share/koski-sandbox-vm pull host main
 ```
 
@@ -163,9 +156,8 @@ recreating the VM from the seed image, as long as you keep using the same
 
 ### Be careful running multiple VMs as the same user simultaneously
 
-The 9p file sharing has no lock manager and uses `cache=loose`. Two VMs
-writing to the same `/mnt/share/claude/<user>/` give last-writer-wins on
-every file, with stale-cache reads on top.
+The 9p file sharing has no lock manager. Two VMs writing to the same
+`/mnt/share/claude/<user>/` give last-writer-wins on every file.
 
 ## Git config
 
@@ -190,8 +182,8 @@ enough — add VM-only aliases and tooling on top as needed.
 ### Working with git on the share
 
 Set up your git repos and remotes so that the same directory is never
-written concurrently by the host and/or multiple VMs — 9p `cache=loose` has
-no lock manager, so concurrent writers will corrupt refs and the index. Sign
+written concurrently by the host and/or multiple VMs — 9p has no lock
+manager, so concurrent writers will corrupt refs and the index. Sign
 and push to GitHub from the host, since the VM has no credentials or
 signing key.
 
@@ -299,9 +291,11 @@ unsure, put the package in `postSeedModules`.
       require a key dropped on the share, or only listen on a vsock/loopback
       transport that isn't exposed beyond the host.
 - There are now GUI settings specific to Macs, think how to modularize (e.g. keyboard type)
-- Investigate replacing the 9p `cache=loose` share with virtiofs (and
-  POSIX-lock pass-through), which would give host + multiple VMs a coherent
-  view of `~/koski-share/` and make concurrent access safer.
+- Investigate replacing the 9p share with virtiofs (and POSIX-lock
+  pass-through), which would let host + multiple VMs share
+  `~/koski-share/` safely under concurrent access. Today we run 9p
+  with `cache=none` for cross-side coherence, which is correct but
+  slower than a properly locked virtiofs setup would be.
 - Reduce reliance on the broad host↔VM share. Today every outbound flow
   from the VM (commits, file edits, build artifacts) goes through the
   same wide-open share, which is also the sandbox-escape vector
@@ -354,13 +348,6 @@ ownership, so files appear as the VM user regardless of host uid/gid (501
   bindfs layer mounted — `mount | grep fuse.bindfs` should show
   `/mnt/share`. If only `/run/koskishare` is mounted, the bindfs unit
   failed; `journalctl -u mnt-share.mount` shows why.
-- **VM sees stale content under `/mnt/share` after host-side edits**:
-  the 9p share uses `cache=loose` and bindfs caches on top, so the
-  guest doesn't revalidate against the host. For content-only edits,
-  drop the guest caches:
-  `sync && sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'`. Structural
-  changes (rename, delete, swap to symlink) can leave stale dentries
-  that survive this — reboot the VM in that case.
 - **JetBrains IDE (IDEA, Toolbox, …) shows a corrupted splash / EULA
   dialog**: the default UTM display device on Apple Silicon
   (`virtio-gpu-gl-pci`) mangles the framebuffer for JetBrains'
