@@ -51,17 +51,23 @@
       packages = forAllSystems (system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
-          image = nixos-generators.nixosGenerate {
-            inherit system;
+          mkImage = modules: nixos-generators.nixosGenerate {
+            inherit system modules;
             specialArgs = mkSpecialArgs system;
             format = "qcow-efi";
-            modules = seedModules;
           };
-        in {
-          inherit image;
-          compressedImage = pkgs.runCommand "nixos-compressed.qcow2"
+          mkCompressed = name: image: pkgs.runCommand name
             { nativeBuildInputs = [ pkgs.qemu-utils ]; }
             ''qemu-img convert -c -O qcow2 ${image}/nixos.qcow2 $out'';
+          image = mkImage seedModules;
+          # Bakes postSeedModules into the qcow2 so first boot runs no big
+          # download. Not for public distribution — postSeedModules carries
+          # non-redistributable binaries (IDEA, Claude Code).
+          fullImage = mkImage (seedModules ++ postSeedModules);
+        in {
+          inherit image fullImage;
+          compressedImage = mkCompressed "nixos-compressed.qcow2" image;
+          compressedFullImage = mkCompressed "nixos-full-compressed.qcow2" fullImage;
         });
 
       nixosConfigurations = nixpkgs.lib.genAttrs (map (s: "sandbox-${s}") systems)

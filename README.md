@@ -223,8 +223,9 @@ aarch64 seed.
 
 ```sh
 cd ~/koski-share/koski-sandbox-host   # or wherever you have it cloned
-nix build .#packages.aarch64-linux.compressedImage --impure -L
-cp -L result /mnt/share/koski-sandbox-aarch64.qcow2
+arch=$(uname -m)
+nix build .#packages.$arch-linux.compressedImage --impure -L
+cp -L result /mnt/share/koski-sandbox-$arch.qcow2
 ```
 
 `--impure` is needed because `modules/user.nix` reads
@@ -232,8 +233,9 @@ cp -L result /mnt/share/koski-sandbox-aarch64.qcow2
 `sandbox` during the seed build). The username file is written on each
 teammate's first boot from `/mnt/share/.host-username`.
 
-For x86_64 the same command on an Intel-Linux NixOS environment, with
-`packages.x86_64-linux.compressedImage`.
+The build runs on whichever architecture the NixOS environment matches —
+aarch64 on an Apple Silicon UTM VM, x86_64 on an Intel-Linux NixOS
+environment.
 
 Distribute the resulting qcow2 to the team via shared storage.
 
@@ -250,6 +252,30 @@ The `x86_64` build runs on `ubuntu-24.04` with KVM. The `aarch64` build
 runs on `ubuntu-24.04-arm`, which doesn't expose `/dev/kvm`; the inner
 `nixos-install` VM falls back to TCG and is roughly 10–50× slower than
 the x86_64 job.
+
+### Building a "full" image (private use)
+
+For machines where the long first-boot download is inconvenient, build
+a full image that bakes `postSeedModules` (GUI stack, IntelliJ IDEA,
+Claude Code, dev tools) into the qcow2:
+
+```sh
+cd ~/koski-share/koski-sandbox-host
+nix build .#packages.$(uname -m)-linux.compressedFullImage --impure -L
+cp -L result /mnt/share/koski-sandbox-full-image-$(uname -m).qcow2
+```
+
+Use the resulting qcow2 the same way as the public seed (see
+[How to start](#how-to-start)). First boot still personalizes the
+username and runs `nixos-rebuild switch`, but the full closure is
+already on disk so nothing is downloaded — the VM comes up to GNOME
+without a bandwidth-bound wait.
+
+**Don't redistribute the full qcow2.** It bundles IntelliJ IDEA
+Ultimate and Claude Code, which we don't have the right to redistribute
+— that's why the default seed leaves them in `postSeedModules` and
+lets each user pull them from the nixpkgs binary cache on first boot.
+The GitHub Actions workflow only builds the redistributable seed.
 
 ### Adding packages — what goes in the seed
 
