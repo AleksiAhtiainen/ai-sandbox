@@ -164,9 +164,9 @@ conduits between host and VM. Inventory (paths in VM view):
 
 ## ⚠ The share is the way out of the sandbox
 
-**TL;DR:** Treat anything the VM writes to `~/koski-share` as untrusted
-on the host — don't run it, and don't open it in tools that auto-execute
-code.
+**TL;DR:** Treat anything and especially the files the VM writes in `~/koski-share`
+as untrusted on the host — don't run anything from there, and don't open it from there
+in tools that auto-execute code.
 
 `~/koski-share` is the only conduit between the VM and the host, and on
 the host it's a normal directory with full host privileges. Anything the
