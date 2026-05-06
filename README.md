@@ -79,45 +79,69 @@ it is also possible to sign commits on the host before pushing to remote repo.
 
 ### Keeping the VM up to date
 
-   ```sh
-   # On the host: pull the latest config from GitHub into the host-writable
-   # clone (the VM has no credentials, so this can't happen in the VM):
-   git -C ~/koski-share/koski-sandbox-host pull
+1. **On the host**: **pull the latest config from GitHub** into the host-writable
+  clone (the VM has no credentials, so this can't happen in the VM):
 
-   # In the VM: pull from the host-writable clone:
+   ```sh
+   git -C ~/koski-share/koski-sandbox-host pull
+   ```
+
+2. **In the VM**: **pull from the host-writable clone**:
+   
+   ```sh
    cd /mnt/share/koski-sandbox-vm
    git pull host main
+   ```
 
-   # Bump pinned nixpkgs package versions yourself (weekly-ish). This writes
-   # the new flake.lock into the VM dir — publish it back to GitHub via the
-   # host with the steps below.
+3. **In the VM**: **Bump pinned nixpkgs package versions** yourself (weekly-ish). This writes
+  the new flake.lock into the VM dir — publish it back to GitHub via the
+  host with the steps below.
+
+   ```sh
    nix flake update nixpkgs
+   ```
 
-   # To update only the unstable input (claude-code, IntelliJ IDEA, …):
+   To update only the unstable input (claude-code, IntelliJ IDEA, …):
+   
+   ```sh
    nix flake update unstable
+   ```
 
-   # Commit the resulting flake.lock changes, if required
+4. **In the VM**: Commit the resulting flake.lock changes, if required
+
+   ```sh
    git add ...
    git commit ...
+   ```
 
-   # Apply changes — run after any of the above:
+5. **In the VM**: **Apply changes** — run after any of the above:
+
+   ```sh
    sudo nixos-rebuild switch --flake .#sandbox-$(uname -m)-linux --impure
+   ```
 
-   # Publish VM-side commits (flake.lock bumps, config tweaks) back to
-   # GitHub. The VM has no GitHub credentials and no signing key, so
-   # re-signing and pushing must happen on the host:
+6. **On the host:** **Publish VM-side commits** (flake.lock bumps, config tweaks) back to GitHub. The VM has no
+  GitHub credentials and no signing key, so re-signing and pushing must happen on the host:
 
-   # On the host: fetch the VM's commits and review them before re-signing.
+   Fetch the VM's commits and review them before re-signing.
+
+   ```sh
    cd ~/koski-share/koski-sandbox-host
    git fetch vm main
    git log -p --stat main..vm/main
+   ```
 
-   # Then re-sign each commit with the host's key and push to GitHub:
+   Then re-sign each commit with the host's key and push to GitHub:
+
+   ```sh
    git cherry-pick -S main..vm/main
    git push origin
+   ```
 
-   # Back in the VM: pull so the VM tracks the now-signed published history
-   # (and so its `main` matches `origin/main`):
+7. **Back in the VM**: pull so the VM tracks the now-signed published history
+   (and so its `main` matches `origin/main`):
+
+   ```sh
    git -C /mnt/share/koski-sandbox-vm pull host main
    ```
 
