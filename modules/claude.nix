@@ -15,10 +15,10 @@ let
     text = ''
       set -euo pipefail
 
-      share="/mnt/share/claude/${username}"
+      share="/mnt/share/shared-config/claude"
       home="${homeDir}/.claude"
 
-      install -d -o ${username} -g users -m 0755 /mnt/share/claude
+      install -d -o ${username} -g users -m 0755 /mnt/share/shared-config
       install -d -o ${username} -g users -m 0700 "$share"
 
       if [ -e "$home" ] && [ ! -L "$home" ]; then
@@ -37,7 +37,7 @@ in
   ];
 
   systemd.services.koski-claude-bootstrap = {
-    description = "Bootstrap per-VM Claude state on /mnt/share";
+    description = "Bootstrap per-VM Claude state on /mnt/share/shared-config";
     after = [ "mnt-share.mount" ];
     wants = [ "mnt-share.mount" ];
     wantedBy = [ "multi-user.target" ];

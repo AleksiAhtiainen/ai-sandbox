@@ -6,8 +6,8 @@ Reusable, team-shareable NixOS VM image for the Koski sandbox.
 
    ```sh
    # On the host (one-time setup):
-   mkdir -p ~/koski-share
-   echo "$USER" > ~/koski-share/.host-username
+   mkdir -p ~/koski-share/shared-config
+   echo "$USER" > ~/koski-share/shared-config/.host-username
    git clone git@github.com:Opetushallitus/koski-sandbox.git \
      ~/koski-share/koski-sandbox-host
 
@@ -105,11 +105,11 @@ conduits between host and VM. Inventory (paths in VM view):
 
 | Path | Writer | Purpose |
 | ---- | ------ | ------- |
-| `.host-username` | host | One line with the host username. Read once by `koski-firstboot.service` to provision the VM user. Required. |
-| `.gitconfig` | host | Optional VM git identity. See [Git config](#git-config). |
-| `idea64.vmoptions` | host | Optional IDEA JVM flags; `IDEA_VM_OPTIONS` is set to this path system-wide. See [Troubleshooting](#troubleshooting) for the flags that fix UTM rendering on Apple Silicon. |
-| `claude/<username>/` | VM | Claude Code state. See [Where Claude state lives](#where-claude-state-lives). |
-| `fish_config/` | host (creates), VM (writes state) | Optional Fish config. See [Fish shell (optional)](#fish-shell-optional). |
+| `shared-config/.host-username` | host | One line with the host username. Read once by `koski-firstboot.service` to provision the VM user. Required. |
+| `shared-config/.gitconfig` | host | Optional VM git identity. See [Git config](#git-config). |
+| `shared-config/idea64.vmoptions` | host | Optional IDEA JVM flags; `IDEA_VM_OPTIONS` is set to this path system-wide. See [Troubleshooting](#troubleshooting) for the flags that fix UTM rendering on Apple Silicon. |
+| `shared-config/claude/` | VM | Claude Code state. See [Where Claude state lives](#where-claude-state-lives). |
+| `shared-config/fish_config/` | host (creates), VM (writes state) | Optional Fish config. See [Fish shell (optional)](#fish-shell-optional). |
 | `koski-sandbox-host/` | host | Host-writable clone of this repo; the only side that pushes to GitHub. |
 | `koski-sandbox-vm/` | VM | VM-writable clone of this repo; the side `nixos-rebuild` runs against. See the topology table above for the cross-clone remotes. |
 | `koski-sandbox-<arch>.qcow2[.gz]` | maintainer | Seed image(s) staged here by `nix build` for distribution to the team. Not required on user machines. |
@@ -154,7 +154,7 @@ preinstalled (`claude` on `PATH`).
 
 ### Where Claude state lives
 
-`~/.claude/` is a symlink to `/mnt/share/claude/<username>/`. Any
+`~/.claude/` is a symlink to `/mnt/share/shared-config/claude/`. Any
 state Claude Code writes — settings, memories, MCP config, OAuth login,
 project history, todos — survives `nixos-rebuild`, VM shutdown, and
 recreating the VM from the seed image, as long as you keep using the same
@@ -163,7 +163,7 @@ recreating the VM from the seed image, as long as you keep using the same
 ### Be careful running multiple VMs as the same user simultaneously
 
 The 9p file sharing has no lock manager. Two VMs writing to the same
-`/mnt/share/claude/<user>/` give last-writer-wins on every file.
+`/mnt/share/shared-config/claude/` give last-writer-wins on every file.
 
 ## Git config
 
@@ -171,14 +171,14 @@ Drop a `.gitconfig` on the share to give git an identity inside the VM:
 
    ```sh
    # On the host:
-   cat > ~/koski-share/.gitconfig <<'EOF'
+   cat > ~/koski-share/shared-config/.gitconfig <<'EOF'
    [user]
      name = Your Name
      email = you@example.com
    EOF
    ```
 
-**Don't symlink your host's real `~/.gitconfig` into `~/koski-share/`.** Use a
+**Don't symlink your host's real `~/.gitconfig` into `~/koski-share/shared-config/`.** Use a
 VM-specific copy. The host config typically references things that don't make
 sense in the sandbox (signing key paths, `gpg.program`, credential helpers,
 `includeIf` paths, custom diff/merge tools), and sharing it weakens the
@@ -202,16 +202,16 @@ shell. To opt in:
    # On the host (one-time): create the shared fish config dir. The VM
    # symlinks ~/.config/fish to it on next boot, so anything you drop in
    # here (config.fish, functions/, completions/, conf.d/) is picked up.
-   mkdir -p ~/koski-share/fish_config
+   mkdir -p ~/koski-share/shared-config/fish_config
 
    # In the VM: make fish your default login shell, then log out and back in.
    chsh -s "$(which fish)"
    ```
 
-If `~/koski-share/fish_config` doesn't exist, the symlink isn't created
+If `~/koski-share/shared-config/fish_config` doesn't exist, the symlink isn't created
 and any local `~/.config/fish` is left untouched. Fish state lives on the
 share, so it survives `nixos-rebuild` and recreating the VM — the same
-single-writer caveat as `/mnt/share/claude/<user>/` applies.
+single-writer caveat as `/mnt/share/shared-config/claude/` applies.
 
 ## Development tools
 
@@ -236,7 +236,7 @@ aarch64 seed.
 `--impure` is needed because `modules/user.nix` reads
 `/etc/koski-sandbox-username` at evaluation time (with a safe fallback to
 `sandbox` during the seed build). The username file is written on each
-teammate's first boot from `/mnt/share/.host-username`.
+teammate's first boot from `/mnt/share/shared-config/.host-username`.
 
 The build runs on whichever architecture the NixOS environment matches —
 aarch64 on an Apple Silicon UTM VM, x86_64 on an Intel-Linux NixOS
@@ -368,7 +368,7 @@ ownership, so files appear as the VM user regardless of host uid/gid (501
 
 ## Troubleshooting
 
-- **`koski-firstboot.service` failed**: most likely `/mnt/share/.host-username`
+- **`koski-firstboot.service` failed**: most likely `/mnt/share/shared-config/.host-username`
   was missing or contained whitespace/invalid characters.
   `journalctl -u koski-firstboot` shows the exact reason. Fix the file on
   the host, then `sudo systemctl restart koski-firstboot`.
@@ -388,7 +388,7 @@ ownership, so files appear as the VM user regardless of host uid/gid (501
   Skia/JBR renderer. Two workarounds, lighter first:
 
   1. Disable HW acceleration **only inside the IDE**. Drop these lines
-     into `/mnt/share/idea64.vmoptions` on the host (the VM sets
+     into `/mnt/share/shared-config/idea64.vmoptions` on the host (the VM sets
      `IDEA_VM_OPTIONS` to that path system-wide, so every VM picks it up
      and you skip the per-version `~/.config/JetBrains/IntelliJIdea<version>/`
      dance):
@@ -414,7 +414,7 @@ ownership, so files appear as the VM user regardless of host uid/gid (501
   screen** even after the splash/EULA workaround above: the preview is
   rendered by JCEF (embedded Chromium), which has its own GPU pipeline
   not covered by the Java2D flags. Append to the same
-  `/mnt/share/idea64.vmoptions` as above:
+  `/mnt/share/shared-config/idea64.vmoptions` as above:
 
   ```
   -Dide.browser.jcef.gpu.disable=true

@@ -7,7 +7,7 @@ let
     text = ''
       set -euo pipefail
 
-      src=/mnt/share/.host-username
+      src=/mnt/share/shared-config/.host-username
       if [ ! -f "$src" ]; then
         echo "missing $src — host must write its username there before first boot" >&2
         exit 1

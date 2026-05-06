@@ -15,7 +15,7 @@ let
     text = ''
       set -euo pipefail
 
-      src="/mnt/share/.gitconfig"
+      src="/mnt/share/shared-config/.gitconfig"
       dest="${homeDir}/.gitconfig"
 
       if [ ! -e "$src" ]; then
@@ -37,7 +37,7 @@ let
 in
 {
   systemd.services.koski-git-bootstrap = {
-    description = "Link host-provided .gitconfig from /mnt/share into the VM user home";
+    description = "Link host-provided .gitconfig from /mnt/share/shared-config into the VM user home";
     after = [ "mnt-share.mount" ];
     wants = [ "mnt-share.mount" ];
     wantedBy = [ "multi-user.target" ];

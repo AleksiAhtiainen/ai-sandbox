@@ -15,7 +15,7 @@ let
     text = ''
       set -euo pipefail
 
-      share="/mnt/share/fish_config"
+      share="/mnt/share/shared-config/fish_config"
       target="${homeDir}/.config/fish"
 
       # Source of truth lives on the share. If it isn't there, leave the
@@ -47,7 +47,7 @@ in
   programs.fish.enable = true;
 
   systemd.services.koski-fish-bootstrap = {
-    description = "Symlink ~/.config/fish to /mnt/share/fish_config when available";
+    description = "Symlink ~/.config/fish to /mnt/share/shared-config/fish_config when available";
     after = [ "mnt-share.mount" ];
     wants = [ "mnt-share.mount" ];
     wantedBy = [ "multi-user.target" ];
