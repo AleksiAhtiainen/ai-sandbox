@@ -4,44 +4,68 @@ Reusable, team-shareable NixOS VM image for the Koski sandbox.
 
 ## How to start
 
+1. **On the host**: **Setup the share and mandatory config file** for username:
+ 
    ```sh
    # On the host (one-time setup):
    mkdir -p ~/koski-share/shared-config
    echo "$USER" > ~/koski-share/shared-config/.host-username
    git clone git@github.com:Opetushallitus/koski-sandbox.git \
      ~/koski-share/koski-sandbox-host
+   ```
 
-   # Grab koski-sandbox-<arch>.qcow2 from team storage. Create a VM with it:
-   #   - use that qcow2 as the existing disk
-   #   - add a 9p / VirtFS share named exactly `share` → ~/koski-share
-   #   - ≥ 16 GB RAM (more is better in practice), ≥ 4 cores
-   #   - Add large enough disk (at least 128 GBish, if planning to build
-   #     the NixOS images in the VM
-   #
-   # Boot and wait for first-boot personalization to finish — the seed
-   # comes up to a text console on tty1, sets the host username, then runs
-   # nixos-rebuild to fetch the GUI stack, IDEA, Claude Code, and the dev
-   # tools (kept out of the seed for licensing and size reasons), and
-   # reboots into GNOME.
-   # 
-   # The first boot is bandwidth-bound: there is over 10GB of data to download.
-   # Then log in as your
-   #   host username
-   #   (password: changeme)
-   # and run `passwd` to set a real password.
+2. **On the host**: **Grab koski-sandbox-<arch>.qcow2 from CI**, latest finished build's
+  artifacts, https://github.com/Opetushallitus/koski-sandbox/actions/workflows/build_seed_images.yml.
 
-   # Inside the VM (one-time, after first boot): make a VM-writable clone
-   # from the host-writable one, with the cross-clone remote named `host`:
+3. **On the host**: **Create a VM with e.g. UTM in MacOS**:
+    - use that qcow2 as the existing disk
+    - add a 9p / VirtFS share named exactly **`share` → ~/koski-share**. In MacOS UTM `share` is the
+      name by default.
+    - ≥ 16 GB RAM (more is better in practice), ≥ 4 cores
+    - Resize to large enough disk. At least 128 GBish, if planning to build
+    the NixOS images in the VM
+
+4. **Boot and wait for first-boot personalization to finish**. The seed
+   comes up to a text console on tty1, sets the host username, then runs
+   nixos-rebuild to fetch the GUI stack, IDEA, Claude Code, and the dev
+   tools (kept out of the seed for licensing and size reasons), and
+   reboots into GNOME.
+   
+   **Inside the VM**: The first boot is bandwidth-bound: there is
+   over 10GB of data to download.
+
+   Then log in as your
+
+   ```sh
+   host username
+   password: changeme
+   ```
+      
+   and run
+   
+   ```sh
+   passwd
+   ```
+
+   to set a real password.
+
+6. **Inside the VM** (one-time, after first boot): **make a VM-writable clone
+   from the host-writable one**, with the cross-clone remote named `host`:
+
+   ```sh
    git -c clone.defaultRemoteName=host clone \
      /mnt/share/koski-sandbox-host /mnt/share/koski-sandbox-vm
    cd /mnt/share/koski-sandbox-vm
    sudo nixos-rebuild switch --flake .#sandbox-$(uname -m)-linux --impure
+   ```
 
-   # Optional, on the host: add the VM clone as a remote named `vm`, so the
-   # host can pull VM-side changes (e.g. flake.lock bumps) back out:
+7. **On the host**: **add the VM clone as a remote named `vm`**, so the host can
+   pull VM-side changes (e.g. flake.lock bumps) back out:
+
+   ```sh
    git -C ~/koski-share/koski-sandbox-host remote add vm \
      ../koski-sandbox-vm
-   ```
+   ```   
 
 The share now holds two sibling clones of this repo, one per writer:
 
