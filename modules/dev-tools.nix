@@ -8,7 +8,10 @@
     (maven.override { jdk_headless = jdk17; })
     gnumake
     nodejs_24
+    pdfgrep
     pnpm
+    poppler-utils
+    qpdf
   ];
 
   # Stable path for IDEA's "Add SDK" dialog; the Nix store path changes on rebuild.
