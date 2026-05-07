@@ -146,7 +146,6 @@ conduits between host and VM. Inventory (paths in VM view):
 | ---- | ------ | ------- |
 | `shared-config/.host-username` | host | One line with the host username. Read once by `koski-firstboot.service` to provision the VM user. Required. |
 | `shared-config/.gitconfig` | host | Optional VM git identity. See [Git config](#git-config). |
-| `shared-config/idea64.vmoptions` | host | Optional IDEA JVM flags; `IDEA_VM_OPTIONS` is set to this path system-wide. See [Troubleshooting](#troubleshooting) for the flags that fix UTM rendering on Apple Silicon. |
 | `shared-config/claude/` | VM | Claude Code state. See [Where Claude state lives](#where-claude-state-lives). |
 | `shared-config/fish_config/` | host (creates), VM (writes state) | Optional Fish config. See [Fish shell (optional)](#fish-shell-optional). |
 | `koski-sandbox-host/` | host | Host-writable clone of this repo; the only side that pushes to GitHub. |
@@ -376,8 +375,6 @@ unsure, put the package in `postSeedModules`.
   signing-and-push without exposing the host filesystem. Goal: the
   share is for genuinely shared dev state, not for "the VM needs to do
   anything outside itself."
-- Investigate, if there is a way to get IntelliJ IDEA working with HW acceleration in MacOS
-  UTM hosted VM
 - Figure out the recommended way to create signed commits and push to GitHub
   from inside the VM (e.g. forwarding the host's 1Password SSH agent over a
   vsock/TCP bridge, or a per-VM signing key registered with GitHub). Until
@@ -418,44 +415,3 @@ ownership, so files appear as the VM user regardless of host uid/gid (501
   bindfs layer mounted — `mount | grep fuse.bindfs` should show
   `/mnt/share`. If only `/run/koskishare` is mounted, the bindfs unit
   failed; `journalctl -u mnt-share.mount` shows why.
-- **IntelliJ IDEA shows a corrupted splash / EULA
-  dialog**: the default UTM display device on Apple Silicon
-  (`virtio-gpu-gl-pci`) mangles the framebuffer for JetBrains'
-  Skia/JBR renderer. Two workarounds, lighter first:
-
-  1. Disable HW acceleration **only inside the IDE**. Drop these lines
-     into `/mnt/share/shared-config/idea64.vmoptions` on the host (the VM sets
-     `IDEA_VM_OPTIONS` to that path system-wide, so every VM picks it up
-     and you skip the per-version `~/.config/JetBrains/IntelliJIdea<version>/`
-     dance):
-
-     ```
-     -Dide.ui.hw.acceleration=false
-     -Dsun.java2d.opengl=false
-     -Dsun.java2d.d3d=false
-     -Dsun.java2d.metal=false
-     -Dsun.java2d.xrender=false
-     -Dsun.java2d.pmoffscreen=false
-     ```
-
-     Restart IDEA. Other apps keep host-side GL; IDEA renders correctly
-     but its own UI is slower.
-
-  2. Disable host-side GL globally for the VM. In UTM → Settings →
-     Display, switch the **Display Device** to `virtio-gpu-pci` (no
-     `-gl`). All apps lose host GL acceleration — noticeably slower
-     overall — but rendering everywhere becomes correct. Use this if
-     other Java/Skia apps misrender too.
-- **IntelliJ IDEA Markdown preview pane (e.g. opening `README.md`) shows a black
-  screen** even after the splash/EULA workaround above: the preview is
-  rendered by JCEF (embedded Chromium), which has its own GPU pipeline
-  not covered by the Java2D flags. Append to the same
-  `/mnt/share/shared-config/idea64.vmoptions` as above:
-
-  ```
-  -Dide.browser.jcef.gpu.disable=true
-  -Dide.browser.jcef.gpu.infoCollection.disabled=true
-  ```
-
-  Restart IDEA. JCEF then software-rasterizes the preview — slightly
-  slower but renders correctly.
