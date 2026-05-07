@@ -28,26 +28,17 @@ Reusable, team-shareable NixOS VM image for the Koski sandbox.
 4. **Boot and wait for first-boot personalization to finish**. The seed
    comes up to a text console on tty1, sets the host username, then runs
    nixos-rebuild to fetch the GUI stack, IDEA, Claude Code, and the dev
-   tools (kept out of the seed for licensing and size reasons), and
-   reboots into GNOME.
-   
+   tools (kept out of the seed for licensing and size reasons). Once the
+   rebuild completes it prompts on tty1 for a login password for your
+   user, then reboots into GNOME.
+
    **Inside the VM**: The first boot is bandwidth-bound: there is
-   over 10GB of data to download.
+   over 10GB of data to download. Stay near the console so you can type
+   the password when the prompt appears.
 
-   Then log in as your
-
-   ```sh
-   host username
-   password: changeme
-   ```
-      
-   and run
-   
-   ```sh
-   passwd
-   ```
-
-   to set a real password.
+   No default password ships in the seed — the user account is locked
+   until you set the password at the prompt, and that password is what
+   you'll use at the GDM login screen after the reboot.
 
 6. **Inside the VM** (one-time, after first boot): **make a VM-writable clone
    from the host-writable one**, with the cross-clone remote named `host`:
@@ -366,12 +357,9 @@ unsure, put the package in `postSeedModules`.
 
 - Consider running an SSH server in the VM so users can `ssh` in from a
   host terminal (better paste/scrollback/tmux story than the UTM console).
-    - If added, revisit the seed's default `changeme` password: shipping a
-      known password on a service that's reachable from the host (and any
-      forwarded port) is a much bigger footgun than on the local console.
-      Options: force `passwd` before sshd starts, disable password auth and
-      require a key dropped on the share, or only listen on a vsock/loopback
-      transport that isn't exposed beyond the host.
+  Password auth on a network-reachable service is the wrong default —
+  prefer key-only auth (e.g. a key dropped on the share) or a
+  vsock/loopback-only listener that isn't exposed beyond the host.
 - There are now GUI settings specific to Macs, think how to modularize (e.g. keyboard type)
 - Investigate replacing the 9p share with virtiofs (and POSIX-lock
   pass-through), which would let host + multiple VMs share
@@ -471,12 +459,3 @@ ownership, so files appear as the VM user regardless of host uid/gid (501
 
   Restart IDEA. JCEF then software-rasterizes the preview — slightly
   slower but renders correctly.
-- **"The password you use to log in to your computer no longer matches
-  that of your login keyring"** (e.g. when launching Chromium): GDM
-  auto-creates the GNOME login keyring on first login, encrypted with
-  the seed password (`changeme`). Running `passwd` afterwards doesn't
-  rekey the keyring, so PAM can no longer auto-unlock it. Either nuke
-  it (loses saved Chromium cookies/passwords) — `rm -rf
-  ~/.local/share/keyrings`, then log out and back in — or open Seahorse
-  (`seahorse`), right-click the "Login" keyring → Change Password, with
-  old = `changeme` and new = your current login password.

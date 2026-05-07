@@ -15,7 +15,9 @@ in
     group = "users";
     description = username;
     extraGroups = [ "networkmanager" "wheel" "docker" ];
-    initialPassword = "changeme";
+    # Locked. koski-firstboot prompts for a password on tty1 after the rebuild,
+    # before GDM ever runs — so no default password ships in the seed.
+    initialHashedPassword = "!";
   };
 
   networking.hostName = lib.mkDefault "koski-sandbox";
