@@ -7,6 +7,7 @@
     jdk17
     (maven.override { jdk_headless = jdk17; })
     gnumake
+    jq
     nodejs_24
     pdfgrep
     pnpm
