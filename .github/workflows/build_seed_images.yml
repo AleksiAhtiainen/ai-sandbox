@@ -2,6 +2,9 @@ name: Build seed images
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Build ${{ matrix.arch }} seed image
