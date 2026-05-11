@@ -402,7 +402,12 @@ ownership, so files appear as the VM user regardless of host uid/gid (501
 ## Troubleshooting
 
 - **`koski-firstboot.service` failed**: most likely `/mnt/share/shared-config/.host-username`
-  was missing or contained whitespace/invalid characters.
+  was missing or contained whitespace/invalid characters. The common
+  macOS gotcha is a dotted username (e.g. `firstname.lastname`) — Linux
+  `useradd` only accepts lowercase letters, digits, underscore, and
+  hyphen, so the `echo "$USER" > .host-username` step in the setup
+  recipe silently produces an invalid file for these users. Pick a
+  dot-free name (e.g. `firstname`).
   `journalctl -u koski-firstboot` shows the exact reason. Fix the file on
   the host, then `sudo systemctl restart koski-firstboot`.
 - **9p share didn't mount**: confirm the share name is exactly `share`
@@ -415,3 +420,9 @@ ownership, so files appear as the VM user regardless of host uid/gid (501
   bindfs layer mounted — `mount | grep fuse.bindfs` should show
   `/mnt/share`. If only `/run/koskishare` is mounted, the bindfs unit
   failed; `journalctl -u mnt-share.mount` shows why.
+- **IntelliJ IDEA license activation fails because the VM username
+  differs from your host**: JetBrains ties activations to the OS
+  username, so a host like `firstname.lastname` and a VM forced to
+  `firstname` (see the dotted-username gotcha above) won't share the
+  same license. Launch IDEA with `-Duser.name=<host-username>` to
+  override, e.g. `idea -Duser.name=firstname.lastname`.
