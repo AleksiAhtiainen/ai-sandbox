@@ -148,6 +148,7 @@ conduits between host and VM. Inventory (paths in VM view):
 | `shared-config/.gitconfig` | host | Optional VM git identity. See [Git config](#git-config). |
 | `shared-config/claude/` | VM | Claude Code state. See [Where Claude state lives](#where-claude-state-lives). |
 | `shared-config/fish_config/` | host (creates), VM (writes state) | Optional Fish config. See [Fish shell (optional)](#fish-shell-optional). |
+| `shared-config/.pop-shell` | VM | One line (`on`/`off`) toggling the Pop Shell tiling extension. See [Pop Shell tiling (optional)](#pop-shell-tiling-optional). |
 | `koski-sandbox-host/` | host | Host-writable clone of this repo; the only side that pushes to GitHub. |
 | `koski-sandbox-vm/` | VM | VM-writable clone of this repo; the side `nixos-rebuild` runs against. See the topology table above for the cross-clone remotes. |
 | `koski-sandbox-<arch>.qcow2[.gz]` | maintainer | Seed image(s) staged here by `nix build` for distribution to the team. Not required on user machines. |
@@ -250,6 +251,39 @@ If `~/koski-share/shared-config/fish_config` doesn't exist, the symlink isn't cr
 and any local `~/.config/fish` is left untouched. Fish state lives on the
 share, so it survives `nixos-rebuild` and recreating the VM — the same
 single-writer caveat as `/mnt/share/shared-config/claude/` applies.
+
+## Pop Shell tiling (optional)
+
+[Pop Shell](https://github.com/pop-os/shell) is installed but disabled.
+To opt in, run inside the VM:
+
+   ```sh
+   pop-shell-on
+   ```
+
+This writes `on` to `/mnt/share/shared-config/.pop-shell`, applies the
+change to the current GNOME session, and re-applies it at every later
+login via an XDG autostart entry — so the state persists across
+`nixos-rebuild`, reboots, and recreating the VM from the seed. Because
+the marker lives on the share, the same caveat as `claude/` and
+`fish_config/` applies: single writer only.
+
+`pop-shell-on` also clears GNOME's `Super+Left/Right/Up/Down`
+keybindings (`toggle-tiled-left/right`, `maximize`, `unmaximize`)
+so Pop Shell's focus-navigation bindings come through. On Wayland,
+log out and back in the first time you flip it on so GNOME Shell
+loads the extension.
+
+To revert:
+
+   ```sh
+   pop-shell-off
+   ```
+
+Keys once enabled: `Super+Y` toggles tiling, `Super+-` opens the
+launcher (remapped from the upstream `Super+/`, which needs Shift on a
+Finnish keyboard), `Super+Return` enters window-adjustment mode,
+`Super+Arrows` move focus, `Super+Shift+Arrows` swap windows.
 
 ## Development tools
 
