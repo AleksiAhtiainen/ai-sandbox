@@ -148,6 +148,7 @@ conduits between host and VM. Inventory (paths in VM view):
 | `shared-config/.gitconfig` | host | Optional VM git identity. See [Git config](#git-config). |
 | `shared-config/claude/` | VM | Claude Code state. See [Where Claude state lives](#where-claude-state-lives). |
 | `shared-config/fish_config/` | host (creates), VM (writes state) | Optional Fish config. See [Fish shell (optional)](#fish-shell-optional). |
+| `shared-config/.fish` | VM | One line (`on`/`off`) selecting fish as the login shell. See [Fish shell (optional)](#fish-shell-optional). |
 | `shared-config/.pop-shell` | VM | One line (`on`/`off`) toggling the Pop Shell tiling extension. See [Pop Shell tiling (optional)](#pop-shell-tiling-optional). |
 | `koski-sandbox-host/` | host | Host-writable clone of this repo; the only side that pushes to GitHub. |
 | `koski-sandbox-vm/` | VM | VM-writable clone of this repo; the side `nixos-rebuild` runs against. See the topology table above for the cross-clone remotes. |
@@ -243,14 +244,29 @@ shell. To opt in:
    # here (config.fish, functions/, completions/, conf.d/) is picked up.
    mkdir -p ~/koski-share/shared-config/fish_config
 
-   # In the VM: make fish your default login shell, then log out and back in.
-   chsh -s "$(which fish)"
+   # In the VM: switch the login shell to fish, then log out and back in.
+   fish-on
    ```
+
+This writes `on` to `/mnt/share/shared-config/.fish` and chshes the
+configured user (prompting for sudo). A systemd one-shot re-applies
+the marker at every later boot, and an activation hook re-applies it
+at the end of each `nixos-rebuild switch` — both needed because
+NixOS's user activation otherwise rewrites the shell field in
+`/etc/passwd` back to bash. The state survives `nixos-rebuild`,
+reboots, and recreating the VM from the seed. Because the marker
+lives on the share, the same single-writer caveat as `claude/` and
+`fish_config/` applies.
 
 If `~/koski-share/shared-config/fish_config` doesn't exist, the symlink isn't created
 and any local `~/.config/fish` is left untouched. Fish state lives on the
-share, so it survives `nixos-rebuild` and recreating the VM — the same
-single-writer caveat as `/mnt/share/shared-config/claude/` applies.
+share, so it survives `nixos-rebuild` and recreating the VM.
+
+To revert:
+
+   ```sh
+   fish-off
+   ```
 
 ## Pop Shell tiling (optional)
 
