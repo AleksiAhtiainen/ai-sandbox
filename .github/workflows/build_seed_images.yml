@@ -1,6 +1,8 @@
 name: Build seed images
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * *'
 
 permissions:
   contents: read
