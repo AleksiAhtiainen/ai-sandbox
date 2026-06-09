@@ -37,6 +37,7 @@
         ./modules/spice.nix
         ./modules/claude.nix
         ./modules/idea.nix
+        ./modules/yed.nix
         ./modules/dev-tools.nix
       ];
 
