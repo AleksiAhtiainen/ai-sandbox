@@ -9,9 +9,26 @@ let
   username = readOr "/etc/koski-sandbox-username" "sandbox";
   homeDir = "/home/${username}";
 
+  # Seeded into the user-scope MCP config (~/.claude.json) so Claude Code
+  # can drive the system Chromium out of the box. User scope (not
+  # /etc/claude-code/managed-mcp.json) because the managed file takes
+  # exclusive control and would disable all other MCP servers (IDEA,
+  # claude.ai connectors).
+  chromeDevtoolsMcp = builtins.toJSON {
+    type = "stdio";
+    command = "npx";
+    args = [
+      "-y"
+      "chrome-devtools-mcp@latest"
+      "--executablePath"
+      "/run/current-system/sw/bin/chromium"
+      "--isolated"
+    ];
+  };
+
   bootstrap = pkgs.writeShellApplication {
     name = "koski-claude-bootstrap";
-    runtimeInputs = with pkgs; [ coreutils ];
+    runtimeInputs = with pkgs; [ coreutils jq ];
     text = ''
       set -euo pipefail
 
@@ -28,6 +45,21 @@ let
 
       ln -sfn "$share" "$home"
       chown -h ${username}:users "$home"
+
+      # Seed the chrome-devtools MCP server into Claude Code's user scope
+      # if absent (re-added on every boot; remove it here to drop it).
+      cfg="${homeDir}/.claude.json"
+      server='${chromeDevtoolsMcp}'
+      tmp="$(mktemp)"
+      if [ -s "$cfg" ]; then
+        jq --argjson server "$server" \
+          '.mcpServers["chrome-devtools"] //= $server' "$cfg" > "$tmp"
+      else
+        jq -n --argjson server "$server" \
+          '{ mcpServers: { "chrome-devtools": $server } }' > "$tmp"
+      fi
+      install -o ${username} -g users -m 0600 "$tmp" "$cfg"
+      rm -f "$tmp"
     '';
   };
 in

@@ -200,6 +200,18 @@ project history, todos — survives `nixos-rebuild`, VM shutdown, and
 recreating the VM from the seed image, as long as you keep using the same
 `~/koski-share`. 
 
+### Browser access via MCP
+
+`koski-claude-bootstrap` seeds a `chrome-devtools` MCP server into
+Claude Code's user scope (`~/.claude.json`) on every boot if the entry
+is missing, so Claude can drive the system Chromium out of the box —
+e.g. to verify UI changes in a locally running app. The browser opens
+as a visible window in the GNOME session (with an isolated profile);
+add `--headless` in `modules/claude.nix` to hide it. The definition
+lives in `modules/claude.nix`; edit it there to change flags or to
+stop seeding it. Removing the entry with `claude mcp remove` only
+lasts until the next boot.
+
 ### Be careful running multiple VMs as the same user simultaneously
 
 The 9p file sharing has no lock manager. Two VMs writing to the same
