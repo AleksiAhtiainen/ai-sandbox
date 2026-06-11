@@ -200,17 +200,22 @@ project history, todos — survives `nixos-rebuild`, VM shutdown, and
 recreating the VM from the seed image, as long as you keep using the same
 `~/koski-share`. 
 
-### Browser access via MCP
+### Seeded MCP servers
 
-`koski-claude-bootstrap` seeds a `chrome-devtools` MCP server into
-Claude Code's user scope (`~/.claude.json`) on every boot if the entry
-is missing, so Claude can drive the system Chromium out of the box —
-e.g. to verify UI changes in a locally running app. The browser opens
-as a visible window in the GNOME session (with an isolated profile);
-add `--headless` in `modules/claude.nix` to hide it. The definition
-lives in `modules/claude.nix`; edit it there to change flags or to
-stop seeding it. Removing the entry with `claude mcp remove` only
-lasts until the next boot.
+`koski-claude-bootstrap` seeds MCP servers into Claude Code's user
+scope (`~/.claude.json`) on every boot, so they work on a fresh VM
+without a manual `claude mcp add`. Entries already present in
+`~/.claude.json` are left untouched; removing one with
+`claude mcp remove` only lasts until the next boot. The definitions
+live in `modules/claude.nix`:
+
+- `chrome-devtools` — drives the system Chromium, e.g. to verify UI
+  changes in a locally running app. The browser opens as a visible
+  window in the GNOME session (with an isolated profile); add
+  `--headless` to hide it.
+- `idea` — IntelliJ IDEA's built-in MCP server at
+  `http://127.0.0.1:64342/sse` (IDEA's default port; if IDEA ends up
+  on another port, fix the entry manually).
 
 ### Be careful running multiple VMs as the same user simultaneously
 
