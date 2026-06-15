@@ -200,6 +200,30 @@ project history, todos — survives `nixos-rebuild`, VM shutdown, and
 recreating the VM from the seed image, as long as you keep using the same
 `~/koski-share`. 
 
+### Seeded MCP servers
+
+`koski-claude-bootstrap` seeds MCP servers into Claude Code's user
+scope (`~/.claude.json`) on every boot, so they work on a fresh VM
+without a manual `claude mcp add`. Entries already present in
+`~/.claude.json` are left untouched; removing one with
+`claude mcp remove` only lasts until the next boot. The definitions
+live in `modules/claude.nix`:
+
+- `chrome-devtools` — drives the system Chromium, e.g. to verify UI
+  changes in a locally running app. The browser opens as a visible
+  window in the GNOME session (with an isolated profile); add
+  `--headless` to hide it.
+- `idea` — IntelliJ IDEA's built-in MCP server at
+  `http://127.0.0.1:64342/sse` (IDEA's default port; if IDEA ends up
+  on another port, fix the entry manually).
+
+On the IDEA side, `koski-idea-bootstrap` (`modules/idea.nix`) seeds
+`options/mcpServer.xml` into IDEA's config dir so the built-in MCP
+server is enabled (with brave mode, i.e. no per-tool-call confirmation
+dialogs) without visiting *Settings | Tools | MCP Server* on a fresh
+VM. The file is seeded only if missing — IDEA owns it afterwards, so
+turning the server off in the IDE sticks across reboots.
+
 ### Be careful running multiple VMs as the same user simultaneously
 
 The 9p file sharing has no lock manager. Two VMs writing to the same
