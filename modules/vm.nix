@@ -40,6 +40,9 @@
     efiSupport = lib.mkDefault true;
     efiInstallAsRemovable = lib.mkDefault true;
     device = lib.mkDefault "nodev";
+    # The ESP is a fixed 256 MiB; cap kept generations so their kernels
+    # (~71 MiB each) can't fill /boot and break the next rebuild.
+    configurationLimit = lib.mkDefault 3;
   };
 
   environment.etc."nixos".source = flakeSelf;
