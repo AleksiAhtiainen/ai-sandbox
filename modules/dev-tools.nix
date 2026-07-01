@@ -8,6 +8,7 @@
     (maven.override { jdk_headless = jdk17; })
     gnumake
     graphviz
+    inkscape
     jq
     nodejs_24
     pdfgrep
