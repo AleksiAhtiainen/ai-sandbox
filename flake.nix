@@ -39,6 +39,7 @@
         ./modules/idea.nix
         ./modules/yed.nix
         ./modules/dev-tools.nix
+        ./modules/opencode.nix
       ];
 
       mkSpecialArgs = system: {
