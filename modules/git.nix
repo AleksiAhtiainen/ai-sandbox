@@ -6,11 +6,11 @@ let
     then lib.removeSuffix "\n" (builtins.readFile path)
     else default;
 
-  username = readOr "/etc/koski-sandbox-username" "sandbox";
+  username = readOr "/etc/ai-sandbox-username" "sandbox";
   homeDir = "/home/${username}";
 
   bootstrap = pkgs.writeShellApplication {
-    name = "koski-git-bootstrap";
+    name = "ai-sandbox-git-bootstrap";
     runtimeInputs = with pkgs; [ coreutils ];
     text = ''
       set -euo pipefail
@@ -36,16 +36,16 @@ let
   };
 in
 {
-  systemd.services.koski-git-bootstrap = {
+  systemd.services.ai-sandbox-git-bootstrap = {
     description = "Link host-provided .gitconfig from /mnt/share/shared-config into the VM user home";
     after = [ "mnt-share.mount" ];
     wants = [ "mnt-share.mount" ];
     wantedBy = [ "multi-user.target" ];
-    unitConfig.ConditionPathExists = "/etc/koski-sandbox-username";
+    unitConfig.ConditionPathExists = "/etc/ai-sandbox-username";
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
-      ExecStart = "${bootstrap}/bin/koski-git-bootstrap";
+      ExecStart = "${bootstrap}/bin/ai-sandbox-git-bootstrap";
     };
   };
 }

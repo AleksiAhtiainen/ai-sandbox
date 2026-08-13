@@ -6,7 +6,7 @@ let
     then lib.removeSuffix "\n" (builtins.readFile path)
     else default;
 
-  username = readOr "/etc/koski-sandbox-username" "sandbox";
+  username = readOr "/etc/ai-sandbox-username" "sandbox";
   homeDir = "/home/${username}";
 
   # IDEA keeps per-version settings under
@@ -29,7 +29,7 @@ let
   '';
 
   bootstrap = pkgs.writeShellApplication {
-    name = "koski-idea-bootstrap";
+    name = "ai-sandbox-idea-bootstrap";
     runtimeInputs = with pkgs; [ coreutils ];
     text = ''
       set -euo pipefail
@@ -57,14 +57,14 @@ in
     # jetbrains-toolbox
   ];
 
-  systemd.services.koski-idea-bootstrap = {
+  systemd.services.ai-sandbox-idea-bootstrap = {
     description = "Seed IDEA settings that enable the built-in MCP server";
     wantedBy = [ "multi-user.target" ];
-    unitConfig.ConditionPathExists = "/etc/koski-sandbox-username";
+    unitConfig.ConditionPathExists = "/etc/ai-sandbox-username";
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
-      ExecStart = "${bootstrap}/bin/koski-idea-bootstrap";
+      ExecStart = "${bootstrap}/bin/ai-sandbox-idea-bootstrap";
     };
   };
 }

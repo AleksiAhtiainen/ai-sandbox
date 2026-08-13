@@ -43,10 +43,10 @@ jobs:
         run: nix build .#packages.${{ matrix.arch }}-linux.compressedImage --impure -L
 
       - name: Stage artifact with descriptive filename
-        run: cp -L result koski-sandbox-${{ matrix.arch }}.qcow2
+        run: cp -L result ai-sandbox-${{ matrix.arch }}.qcow2
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: koski-sandbox-${{ matrix.arch }}
-          path: koski-sandbox-${{ matrix.arch }}.qcow2
+          name: ai-sandbox-${{ matrix.arch }}
+          path: ai-sandbox-${{ matrix.arch }}.qcow2
           if-no-files-found: error

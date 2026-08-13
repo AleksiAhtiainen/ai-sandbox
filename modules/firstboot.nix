@@ -2,7 +2,7 @@
 
 let
   script = pkgs.writeShellApplication {
-    name = "koski-firstboot";
+    name = "ai-sandbox-firstboot";
     runtimeInputs = with pkgs; [ coreutils gnugrep shadow systemd ];
     text = ''
       set -euo pipefail
@@ -19,7 +19,7 @@ let
   Waiting for $src
 
   On the host, run:
-    echo "\$USER" > ~/koski-share/shared-config/.host-username
+    echo "\$USER" > ~/ai-sandbox-share/shared-config/.host-username
 
   Then press Enter to retry.
 MSG
@@ -43,8 +43,8 @@ MSG
         break
       done
 
-      printf '%s' "$u" > /etc/koski-sandbox-username
-      chmod 0644 /etc/koski-sandbox-username
+      printf '%s' "$u" > /etc/ai-sandbox-username
+      chmod 0644 /etc/ai-sandbox-username
 
       arch=$(uname -m)
       case "$arch" in
@@ -69,18 +69,18 @@ MSG
   };
 in
 {
-  systemd.services.koski-firstboot = {
+  systemd.services.ai-sandbox-firstboot = {
     description = "Personalize VM with host username on first boot";
     after = [ "mnt-share.mount" "network-online.target" ];
     wants = [ "mnt-share.mount" "network-online.target" ];
     before = [ "getty@tty1.service" "display-manager.service" ];
     conflicts = [ "getty@tty1.service" ];
     wantedBy = [ "multi-user.target" ];
-    unitConfig.ConditionPathExists = "!/etc/koski-sandbox-username";
+    unitConfig.ConditionPathExists = "!/etc/ai-sandbox-username";
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
-      ExecStart = "${script}/bin/koski-firstboot";
+      ExecStart = "${script}/bin/ai-sandbox-firstboot";
       StandardInput = "tty";
       StandardOutput = "tty";
       StandardError = "tty";

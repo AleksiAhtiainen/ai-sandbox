@@ -6,7 +6,7 @@ let
     then lib.removeSuffix "\n" (builtins.readFile path)
     else default;
 
-  username = readOr "/etc/koski-sandbox-username" "sandbox";
+  username = readOr "/etc/ai-sandbox-username" "sandbox";
   homeDir = "/home/${username}";
 
   # Seeded into the user-scope MCP config (~/.claude.json) so Claude Code
@@ -37,7 +37,7 @@ let
   };
 
   bootstrap = pkgs.writeShellApplication {
-    name = "koski-claude-bootstrap";
+    name = "ai-sandbox-claude-bootstrap";
     runtimeInputs = with pkgs; [ coreutils jq ];
     text = ''
       set -euo pipefail
@@ -77,16 +77,16 @@ in
     unstablePkgs.claude-code
   ];
 
-  systemd.services.koski-claude-bootstrap = {
+  systemd.services.ai-sandbox-claude-bootstrap = {
     description = "Bootstrap per-VM Claude state on /mnt/share/shared-config";
     after = [ "mnt-share.mount" ];
     wants = [ "mnt-share.mount" ];
     wantedBy = [ "multi-user.target" ];
-    unitConfig.ConditionPathExists = "/etc/koski-sandbox-username";
+    unitConfig.ConditionPathExists = "/etc/ai-sandbox-username";
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
-      ExecStart = "${bootstrap}/bin/koski-claude-bootstrap";
+      ExecStart = "${bootstrap}/bin/ai-sandbox-claude-bootstrap";
     };
   };
 }

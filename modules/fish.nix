@@ -6,11 +6,11 @@ let
     then lib.removeSuffix "\n" (builtins.readFile path)
     else default;
 
-  username = readOr "/etc/koski-sandbox-username" "sandbox";
+  username = readOr "/etc/ai-sandbox-username" "sandbox";
   homeDir = "/home/${username}";
 
   bootstrap = pkgs.writeShellApplication {
-    name = "koski-fish-bootstrap";
+    name = "ai-sandbox-fish-bootstrap";
     runtimeInputs = with pkgs; [ coreutils ];
     text = ''
       set -euo pipefail
@@ -41,7 +41,7 @@ let
   };
 
   shellApply = pkgs.writeShellApplication {
-    name = "koski-fish-shell-apply";
+    name = "ai-sandbox-fish-shell-apply";
     runtimeInputs = with pkgs; [ coreutils shadow ];
     text = ''
       set -euo pipefail
@@ -83,43 +83,43 @@ in
       set -e
       install -d /mnt/share/shared-config
       echo on > /mnt/share/shared-config/.fish
-      sudo ${shellApply}/bin/koski-fish-shell-apply
+      sudo ${shellApply}/bin/ai-sandbox-fish-shell-apply
       echo "Log out and back in for fish to take effect."
     '')
     (pkgs.writeShellScriptBin "fish-off" ''
       set -e
       install -d /mnt/share/shared-config
       echo off > /mnt/share/shared-config/.fish
-      sudo ${shellApply}/bin/koski-fish-shell-apply
+      sudo ${shellApply}/bin/ai-sandbox-fish-shell-apply
       echo "Log out and back in for bash to take effect."
     '')
   ];
 
-  systemd.services.koski-fish-bootstrap = {
+  systemd.services.ai-sandbox-fish-bootstrap = {
     description = "Symlink ~/.config/fish to /mnt/share/shared-config/fish_config when available";
     after = [ "mnt-share.mount" ];
     wants = [ "mnt-share.mount" ];
     wantedBy = [ "multi-user.target" ];
-    unitConfig.ConditionPathExists = "/etc/koski-sandbox-username";
+    unitConfig.ConditionPathExists = "/etc/ai-sandbox-username";
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
-      ExecStart = "${bootstrap}/bin/koski-fish-bootstrap";
+      ExecStart = "${bootstrap}/bin/ai-sandbox-fish-bootstrap";
     };
   };
 
   # Boot path: activation runs before mnt-share is mounted, so re-apply
   # the marker once the share is up.
-  systemd.services.koski-fish-shell-apply = {
+  systemd.services.ai-sandbox-fish-shell-apply = {
     description = "Re-apply login shell from /mnt/share/shared-config/.fish";
     after = [ "mnt-share.mount" ];
     wants = [ "mnt-share.mount" ];
     wantedBy = [ "multi-user.target" ];
-    unitConfig.ConditionPathExists = "/etc/koski-sandbox-username";
+    unitConfig.ConditionPathExists = "/etc/ai-sandbox-username";
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
-      ExecStart = "${shellApply}/bin/koski-fish-shell-apply";
+      ExecStart = "${shellApply}/bin/ai-sandbox-fish-shell-apply";
     };
   };
 
@@ -127,7 +127,7 @@ in
   # switch`, after NixOS's `users` activation has reset /etc/passwd.
   # The share is already mounted in a running session, so this takes
   # effect immediately without waiting for a reboot.
-  system.activationScripts.koski-fish-shell-apply = lib.stringAfter [ "users" ] ''
-    ${shellApply}/bin/koski-fish-shell-apply || true
+  system.activationScripts.ai-sandbox-fish-shell-apply = lib.stringAfter [ "users" ] ''
+    ${shellApply}/bin/ai-sandbox-fish-shell-apply || true
   '';
 }

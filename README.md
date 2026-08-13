@@ -1,6 +1,6 @@
-# Koski NixOS sandbox VM
+# AI Sandbox NixOS VM
 
-Reusable, team-shareable NixOS VM image for the Koski sandbox. 
+Reusable, team-shareable NixOS VM image for the AI sandbox. 
 
 ## How to start
 
@@ -8,18 +8,18 @@ Reusable, team-shareable NixOS VM image for the Koski sandbox.
  
    ```sh
    # On the host (one-time setup):
-   mkdir -p ~/koski-share/shared-config
-   echo "$USER" > ~/koski-share/shared-config/.host-username
-   git clone git@github.com:Opetushallitus/koski-sandbox.git \
-     ~/koski-share/koski-sandbox-host
+   mkdir -p ~/ai-sandbox-share/shared-config
+   echo "$USER" > ~/ai-sandbox-share/shared-config/.host-username
+   git clone git@github.com:AleksiAhtiainen/ai-sandbox.git \
+     ~/ai-sandbox-share/ai-sandbox-host
    ```
 
-2. **On the host**: **Grab koski-sandbox-<arch>.qcow2 from CI**, latest finished build's
-  artifacts, https://github.com/Opetushallitus/koski-sandbox/actions/workflows/build_seed_images.yml.
+2. **On the host**: **Grab ai-sandbox-<arch>.qcow2 from CI**, latest finished build's
+  artifacts, https://github.com/AleksiAhtiainen/ai-sandbox/actions/workflows/build_seed_images.yml.
 
 3. **On the host**: **Create a VM with e.g. UTM in MacOS**:
     - use that qcow2 as the existing disk
-    - add a 9p / VirtFS share named exactly **`share` → ~/koski-share**. In MacOS UTM `share` is the
+    - add a 9p / VirtFS share named exactly **`share` → ~/ai-sandbox-share**. In MacOS UTM `share` is the
       name by default.
     - ≥ 16 GB RAM (more is better in practice), ≥ 4 cores
     - Resize to large enough disk. At least 128 GBish, if planning to build
@@ -45,8 +45,8 @@ Reusable, team-shareable NixOS VM image for the Koski sandbox.
 
    ```sh
    git -c clone.defaultRemoteName=host clone \
-     /mnt/share/koski-sandbox-host /mnt/share/koski-sandbox-vm
-   cd /mnt/share/koski-sandbox-vm
+     /mnt/share/ai-sandbox-host /mnt/share/ai-sandbox-vm
+   cd /mnt/share/ai-sandbox-vm
    sudo nixos-rebuild switch --flake .#sandbox-$(uname -m)-linux --impure
    ```
 
@@ -54,16 +54,16 @@ Reusable, team-shareable NixOS VM image for the Koski sandbox.
    pull VM-side changes (e.g. flake.lock bumps) back out:
 
    ```sh
-   git -C ~/koski-share/koski-sandbox-host remote add vm \
-     ../koski-sandbox-vm
+   git -C ~/ai-sandbox-share/ai-sandbox-host remote add vm \
+     ../ai-sandbox-vm
    ```   
 
 The share now holds two sibling clones of this repo, one per writer:
 
 | Path (VM view)                  | Written by | Remotes                            |
 | ------------------------------- | ---------- | ---------------------------------- |
-| `/mnt/share/koski-sandbox-host` | host only  | GitHub + `vm` → VM dir             |
-| `/mnt/share/koski-sandbox-vm`   | VM only    | `host` → host dir                  |
+| `/mnt/share/ai-sandbox-host` | host only  | GitHub + `vm` → VM dir             |
+| `/mnt/share/ai-sandbox-vm`   | VM only    | `host` → host dir                  |
 
 The idea of this split is that repos can pull or push data from each other, and
 it is also possible to sign commits on the host before pushing to remote repo.
@@ -74,13 +74,13 @@ it is also possible to sign commits on the host before pushing to remote repo.
   clone (the VM has no credentials, so this can't happen in the VM):
 
    ```sh
-   git -C ~/koski-share/koski-sandbox-host pull
+   git -C ~/ai-sandbox-share/ai-sandbox-host pull
    ```
 
 2. **In the VM**: **pull from the host-writable clone**:
    
    ```sh
-   cd /mnt/share/koski-sandbox-vm
+   cd /mnt/share/ai-sandbox-vm
    git pull host main
    ```
 
@@ -117,7 +117,7 @@ it is also possible to sign commits on the host before pushing to remote repo.
    Fetch the VM's commits and review them before re-signing.
 
    ```sh
-   cd ~/koski-share/koski-sandbox-host
+   cd ~/ai-sandbox-share/ai-sandbox-host
    git fetch vm main
    git log -p --stat main..vm/main
    ```
@@ -133,34 +133,34 @@ it is also possible to sign commits on the host before pushing to remote repo.
    (and so its `main` matches `origin/main`):
 
    ```sh
-   git -C /mnt/share/koski-sandbox-vm pull host main
+   git -C /mnt/share/ai-sandbox-vm pull host main
    ```
 
 ## What lives on the share
 
-`~/koski-share/` on the host (= `/mnt/share/` in the VM) holds everything
+`~/ai-sandbox-share/` on the host (= `/mnt/share/` in the VM) holds everything
 the sandbox needs to persist across rebuilds and reboots, plus the
 conduits between host and VM. Inventory (paths in VM view):
 
 | Path | Writer | Purpose |
 | ---- | ------ | ------- |
-| `shared-config/.host-username` | host | One line with the host username. Read once by `koski-firstboot.service` to provision the VM user. Required. |
+| `shared-config/.host-username` | host | One line with the host username. Read once by `ai-sandbox-firstboot.service` to provision the VM user. Required. |
 | `shared-config/.gitconfig` | host | Optional VM git identity. See [Git config](#git-config). |
 | `shared-config/claude/` | VM | Claude Code state. See [Where Claude state lives](#where-claude-state-lives). |
 | `shared-config/fish_config/` | host (creates), VM (writes state) | Optional Fish config. See [Fish shell (optional)](#fish-shell-optional). |
 | `shared-config/.fish` | VM | One line (`on`/`off`) selecting fish as the login shell. See [Fish shell (optional)](#fish-shell-optional). |
 | `shared-config/.pop-shell` | VM | One line (`on`/`off`) toggling the Pop Shell tiling extension. See [Pop Shell tiling (optional)](#pop-shell-tiling-optional). |
-| `koski-sandbox-host/` | host | Host-writable clone of this repo; the only side that pushes to GitHub. |
-| `koski-sandbox-vm/` | VM | VM-writable clone of this repo; the side `nixos-rebuild` runs against. See the topology table above for the cross-clone remotes. |
-| `koski-sandbox-<arch>.qcow2[.gz]` | maintainer | Seed image(s) staged here by `nix build` for distribution to the team. Not required on user machines. |
+| `ai-sandbox-host/` | host | Host-writable clone of this repo; the only side that pushes to GitHub. |
+| `ai-sandbox-vm/` | VM | VM-writable clone of this repo; the side `nixos-rebuild` runs against. See the topology table above for the cross-clone remotes. |
+| `ai-sandbox-<arch>.qcow2[.gz]` | maintainer | Seed image(s) staged here by `nix build` for distribution to the team. Not required on user machines. |
 
 ## ⚠ The share is the way out of the sandbox
 
-**TL;DR:** Treat anything and especially the files the VM writes in `~/koski-share`
+**TL;DR:** Treat anything and especially the files the VM writes in `~/ai-sandbox-share`
 as untrusted on the host — don't run anything from there, and don't open it from there
 in tools that auto-execute code.
 
-`~/koski-share` is the only conduit between the VM and the host, and on
+`~/ai-sandbox-share` is the only conduit between the VM and the host, and on
 the host it's a normal directory with full host privileges. Anything the
 VM writes there — directly, or via a compromised tool, dependency, or
 agent — is sitting in your home directory ready to be picked up by host
@@ -176,7 +176,7 @@ Concretely, on the host side:
   `direnv`/`mise` autoloaders, git hooks (`pre-commit`, `post-checkout`,
   `…`). Open them from inside the VM instead.
 - Be deliberate about which directories under the share host tools index
-  — a host editor that recursively scans `~/koski-share/` is reading
+  — a host editor that recursively scans `~/ai-sandbox-share/` is reading
   whatever the VM put there.
 - Treat anything *the VM has written* as untrusted input on the host,
   even when you're the one who asked it to write it.
@@ -198,11 +198,11 @@ preinstalled (`claude` on `PATH`).
 state Claude Code writes — settings, memories, MCP config, OAuth login,
 project history, todos — survives `nixos-rebuild`, VM shutdown, and
 recreating the VM from the seed image, as long as you keep using the same
-`~/koski-share`. 
+`~/ai-sandbox-share`. 
 
 ### Seeded MCP servers
 
-`koski-claude-bootstrap` seeds MCP servers into Claude Code's user
+`ai-sandbox-claude-bootstrap` seeds MCP servers into Claude Code's user
 scope (`~/.claude.json`) on every boot, so they work on a fresh VM
 without a manual `claude mcp add`. Entries already present in
 `~/.claude.json` are left untouched; removing one with
@@ -217,7 +217,7 @@ live in `modules/claude.nix`:
   `http://127.0.0.1:64342/sse` (IDEA's default port; if IDEA ends up
   on another port, fix the entry manually).
 
-On the IDEA side, `koski-idea-bootstrap` (`modules/idea.nix`) seeds
+On the IDEA side, `ai-sandbox-idea-bootstrap` (`modules/idea.nix`) seeds
 `options/mcpServer.xml` into IDEA's config dir so the built-in MCP
 server is enabled (with brave mode, i.e. no per-tool-call confirmation
 dialogs) without visiting *Settings | Tools | MCP Server* on a fresh
@@ -235,14 +235,14 @@ Drop a `.gitconfig` on the share to give git an identity inside the VM:
 
    ```sh
    # On the host:
-   cat > ~/koski-share/shared-config/.gitconfig <<'EOF'
+   cat > ~/ai-sandbox-share/shared-config/.gitconfig <<'EOF'
    [user]
      name = Your Name
      email = you@example.com
    EOF
    ```
 
-**Don't symlink your host's real `~/.gitconfig` into `~/koski-share/shared-config/`.** Use a
+**Don't symlink your host's real `~/.gitconfig` into `~/ai-sandbox-share/shared-config/`.** Use a
 VM-specific copy. The host config typically references things that don't make
 sense in the sandbox (signing key paths, `gpg.program`, credential helpers,
 `includeIf` paths, custom diff/merge tools), and sharing it weakens the
@@ -266,7 +266,7 @@ shell. To opt in:
    # On the host (one-time): create the shared fish config dir. The VM
    # symlinks ~/.config/fish to it on next boot, so anything you drop in
    # here (config.fish, functions/, completions/, conf.d/) is picked up.
-   mkdir -p ~/koski-share/shared-config/fish_config
+   mkdir -p ~/ai-sandbox-share/shared-config/fish_config
 
    # In the VM: switch the login shell to fish, then log out and back in.
    fish-on
@@ -282,7 +282,7 @@ reboots, and recreating the VM from the seed. Because the marker
 lives on the share, the same single-writer caveat as `claude/` and
 `fish_config/` applies.
 
-If `~/koski-share/shared-config/fish_config` doesn't exist, the symlink isn't created
+If `~/ai-sandbox-share/shared-config/fish_config` doesn't exist, the symlink isn't created
 and any local `~/.config/fish` is left untouched. Fish state lives on the
 share, so it survives `nixos-rebuild` and recreating the VM.
 
@@ -339,14 +339,14 @@ the target architecture — your existing UTM NixOS VM works for the
 aarch64 seed.
 
    ```sh
-   cd ~/koski-share/koski-sandbox-host   # or wherever you have it cloned
+   cd ~/ai-sandbox-share/ai-sandbox-host   # or wherever you have it cloned
    arch=$(uname -m)
    nix build .#packages.$arch-linux.compressedImage --impure -L
-   cp -L result /mnt/share/koski-sandbox-$arch.qcow2
+   cp -L result /mnt/share/ai-sandbox-$arch.qcow2
    ```
 
 `--impure` is needed because `modules/user.nix` reads
-`/etc/koski-sandbox-username` at evaluation time (with a safe fallback to
+`/etc/ai-sandbox-username` at evaluation time (with a safe fallback to
 `sandbox` during the seed build). The username file is written on each
 teammate's first boot from `/mnt/share/shared-config/.host-username`.
 
@@ -363,7 +363,7 @@ GitHub-hosted runners. It's `workflow_dispatch` only — trigger it from the
 Actions tab (or `gh workflow run "Build seed images"`). The job runs the
 same `nix build .#packages.<arch>-linux.compressedImage` as the local
 recipe above and uploads the resulting qcow2 as a workflow artifact named
-`koski-sandbox-<arch>`, which you then download and stage on the share.
+`ai-sandbox-<arch>`, which you then download and stage on the share.
 
 The `x86_64` build runs on `ubuntu-24.04` with KVM. The `aarch64` build
 runs on `ubuntu-24.04-arm`, which doesn't expose `/dev/kvm`; the inner
@@ -377,9 +377,9 @@ a full image that bakes `postSeedModules` (GUI stack, IntelliJ IDEA,
 Claude Code, dev tools) into the qcow2:
 
    ```sh
-   cd ~/koski-share/koski-sandbox-host
+   cd ~/ai-sandbox-share/ai-sandbox-host
    nix build .#packages.$(uname -m)-linux.compressedFullImage --impure -L
-   cp -L result /mnt/share/koski-sandbox-full-image-$(uname -m).qcow2
+   cp -L result /mnt/share/ai-sandbox-full-image-$(uname -m).qcow2
    ```
 
 Use the resulting qcow2 the same way as the public seed (see
@@ -413,7 +413,7 @@ qcow2) and `postSeedModules` (added by the user's first-boot
    `modules/spice.nix` autostart) and heavy dev tooling (JDK, Maven,
    Node, Chromium, docker-compose, … in `modules/dev-tools.nix`) live
    in `postSeedModules` for this reason: the seed boots to a text
-   console, runs `koski-firstboot`, and fetches all of it from the
+   console, runs `ai-sandbox-firstboot`, and fetches all of it from the
    nixpkgs binary cache on first boot.
 
 Quick check when adding a new package: if it builds without
@@ -436,7 +436,7 @@ unsure, put the package in `postSeedModules`.
 - There are now GUI settings specific to Macs, think how to modularize (e.g. keyboard type)
 - Investigate replacing the 9p share with virtiofs (and POSIX-lock
   pass-through), which would let host + multiple VMs share
-  `~/koski-share/` safely under concurrent access. Today we run 9p
+  `~/ai-sandbox-share/` safely under concurrent access. Today we run 9p
   with `cache=none` for cross-side coherence, which is correct but
   slower than a properly locked virtiofs setup would be.
 - Reduce reliance on the broad host↔VM share. Today every outbound flow
@@ -459,7 +459,7 @@ unsure, put the package in `postSeedModules`.
 - Figure out the easiest way to paste images from the host clipboard into the
   Claude Code shell running in the VM (Claude Code accepts image paste in the
   terminal, but SPICE/UTM clipboard sharing typically only forwards text, so
-  today you'd have to save the image to `~/koski-share/` on the host and
+  today you'd have to save the image to `~/ai-sandbox-share/` on the host and
   reference it by path from inside the VM).
 
 ## Technical notes
@@ -475,24 +475,24 @@ ownership, so files appear as the VM user regardless of host uid/gid (501
 
 ## Troubleshooting
 
-- **`koski-firstboot.service` failed**: most likely `/mnt/share/shared-config/.host-username`
+- **`ai-sandbox-firstboot.service` failed**: most likely `/mnt/share/shared-config/.host-username`
   was missing or contained whitespace/invalid characters. The common
   macOS gotcha is a dotted username (e.g. `firstname.lastname`) — Linux
   `useradd` only accepts lowercase letters, digits, underscore, and
   hyphen, so the `echo "$USER" > .host-username` step in the setup
   recipe silently produces an invalid file for these users. Pick a
   dot-free name (e.g. `firstname`).
-  `journalctl -u koski-firstboot` shows the exact reason. Fix the file on
-  the host, then `sudo systemctl restart koski-firstboot`.
+  `journalctl -u ai-sandbox-firstboot` shows the exact reason. Fix the file on
+  the host, then `sudo systemctl restart ai-sandbox-firstboot`.
 - **9p share didn't mount**: confirm the share name is exactly `share`
   in your VM runtime's settings. UTM "VirtFS" name must match
   `fileSystems."/mnt/share".device`.
 - **Wrong username in VM after first boot** (e.g. `.host-username` had the
   wrong value): re-trigger first-boot:
-  `sudo rm /etc/koski-sandbox-username && sudo systemctl start koski-firstboot`.
+  `sudo rm /etc/ai-sandbox-username && sudo systemctl start ai-sandbox-firstboot`.
 - **`/mnt/share` writes fail with permission denied**: check that the
   bindfs layer mounted — `mount | grep fuse.bindfs` should show
-  `/mnt/share`. If only `/run/koskishare` is mounted, the bindfs unit
+  `/mnt/share`. If only `/run/ai-sandbox-share` is mounted, the bindfs unit
   failed; `journalctl -u mnt-share.mount` shows why.
 - **IntelliJ IDEA license activation fails because the VM username
   differs from your host**: JetBrains ties activations to the OS

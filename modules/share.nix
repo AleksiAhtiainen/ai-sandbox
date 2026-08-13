@@ -9,7 +9,7 @@
   # made on either side are visible on the other without delay. Slower
   # than cache=loose for repeated reads but matches user expectation
   # of a shared directory.
-  fileSystems."/run/koskishare" = {
+  fileSystems."/run/ai-sandbox-share" = {
     device = "share";
     fsType = "9p";
     options = [
@@ -34,7 +34,7 @@
   # show up immediately in the VM (otherwise stat() can return cached
   # metadata for up to a second after the underlying file changed).
   fileSystems."/mnt/share" = {
-    device = "/run/koskishare";
+    device = "/run/ai-sandbox-share";
     fsType = "fuse.bindfs";
     options = [
       "force-user=1000"
@@ -45,7 +45,7 @@
       "entry_timeout=0"
       "negative_timeout=0"
       "nofail"
-      "x-systemd.requires-mounts-for=/run/koskishare"
+      "x-systemd.requires-mounts-for=/run/ai-sandbox-share"
       "x-systemd.automount"
       "_netdev"
     ];

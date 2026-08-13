@@ -1,5 +1,5 @@
 {
-  description = "Koski NixOS sandbox VM image";
+  description = "AI Sandbox NixOS VM image";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
