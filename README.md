@@ -154,6 +154,69 @@ conduits between host and VM. Inventory (paths in VM view):
 | `ai-sandbox-vm/` | VM | VM-writable clone of this repo; the side `nixos-rebuild` runs against. See the topology table above for the cross-clone remotes. |
 | `ai-sandbox-<arch>.qcow2[.gz]` | maintainer | Seed image(s) staged here by `nix build` for distribution to the team. Not required on user machines. |
 
+## Host AI Model – muse-glimmer-local
+
+The sandbox can access a llama.cpp hosted `muse-glimmer-local` model running on the macOS host via the UTM vmnet. This keeps the large model off the VM and lets OpenCode in the VM use it.
+
+### Prerequisites on the host
+
+- llama.cpp built, models downloaded to e.g. `custom-models/`.
+- The model is referenced in Hugging Face muse-glimmer documentation for installation and running.
+
+### Run the model on the host
+
+Find the vmnet bridge IP used by UTM:
+
+```sh
+ifconfig bridge* | grep inet
+```
+
+Typical output is `192.168.64.1`. The IP is stable for the current UTM installation; verify after major macOS/UTM changes.
+
+Run llama-server bound to the vmnet IP only:
+
+```sh
+./build/bin/llama-server \
+  -m custom-models/muse-glimmer-30B-kquant-17gb.gguf \
+  --mmproj custom-models/mmproj-kquant.gguf \
+  -a muse-glimmer-30B \
+  -ngl 99 -c 131072 -np 1 \
+  --host 192.168.64.1 --port 8080 \
+  --jinja \
+  --temp 1.0 --top-p 0.95 --top-k 64
+```
+
+Binding to the vmnet IP limits exposure to the VM subnet. Do not use `--host 0.0.0.0` unless you intend LAN exposure.
+
+### UTM network
+
+UTM Settings → Devices → Network → Network Mode → Shared Network is the default. The VM receives DHCP in `192.168.64.0/24` and can reach `192.168.64.1:8080`.
+
+From inside the VM:
+
+```sh
+curl http://192.168.64.1:8080
+```
+
+### OpenCode default config
+
+`modules/opencode.nix` bootstraps `~/.config/opencode` to `/mnt/share/shared-config/opencode`. On first boot, if no config exists, it seeds `opencode-default-config.json` from the repo.
+
+The default config points OpenCode at the host model:
+
+```json
+{
+  "model": "llama.cpp/muse-glimmer-local",
+  "provider": {
+    "llama.cpp": {
+      "options": { "baseURL": "http://192.168.64.1:8080/v1" }
+    }
+  }
+}
+```
+
+Edit `/mnt/share/shared-config/opencode/opencode.json` on the host to change `baseURL` to your actual vmnet IP. The config survives `nixos-rebuild` and VM recreation as long as the share is kept.
+
 ## ⚠ The share is the way out of the sandbox
 
 **TL;DR:** Treat anything and especially the files the VM writes in `~/ai-sandbox-share`
@@ -186,6 +249,19 @@ exercising a sketchy dependency, letting an agent loose), keep it inside
 the VM. The reason this VM exists is so that those operations don't
 touch the host directly; the share doesn't change that contract, but
 how you treat the share on the host either preserves it or breaks it.
+
+## ⚠ The network is a way out of the sandbox
+
+**TL;DR:** With UTM Shared Network the VM is a network peer of the host. Treat network reachability from the VM to the host as an additional escape vector, separate from the 9p share.
+
+`Shared Network` routes VM traffic directly through the host OS on the vmnet bridge, typically `192.168.64.0/24`. The VM can reach the host’s vmnet IP, scan host services, and, because Shared Network provides Internet access, it can also reach the Internet via the host.
+
+Concretely:
+
+- Any service listening on the vmnet interface is reachable from the VM. If you bind a host service to `0.0.0.0`, it is reachable from LAN/Wi-Fi and from the VM.
+- The VM can perform port scans and attempt exploitation of host services. An untrusted AI agent running in the VM can use the host as a pivot to your internal network.
+- Internet access is available in Shared Network, so an agent can exfiltrate data, download code, or beacon out.
+- This is distinct from the 9p share: the share gives filesystem write access; the network gives service access and outbound connectivity.
 
 ## Claude Code
 

@@ -12,6 +12,8 @@ let
   shareDir = "/mnt/share/shared-config/opencode";
   homeConfig = "${homeDir}/.config/opencode";
 
+  opencodeDefaultConfig = ./opencode-default-config.json;
+
   bootstrap = pkgs.writeShellApplication {
     name = "ai-sandbox-opencode-bootstrap";
     runtimeInputs = with pkgs; [ coreutils ];
@@ -29,6 +31,13 @@ let
 
       ln -sfn "${shareDir}" "${homeConfig}"
       chown -h ${username}:users "${homeConfig}"
+
+      if [ ! -e "${shareDir}/opencode.json" ]; then
+        mkdir -p "${shareDir}"
+        cp "${opencodeDefaultConfig}" "${shareDir}/opencode.json"
+        chown ${username}:users "${shareDir}/opencode.json"
+        chmod 0600 "${shareDir}/opencode.json"
+      fi
     '';
   };
 in
