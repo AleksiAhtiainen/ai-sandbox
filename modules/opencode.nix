@@ -12,7 +12,39 @@ let
   shareDir = "/mnt/share/shared-config/opencode";
   homeConfig = "${homeDir}/.config/opencode";
 
-  opencodeDefaultConfig = ./opencode-default-config.json;
+  opencodeDefaultConfig = builtins.toJSON {
+    "$schema" = "https://opencode.ai/config.json";
+    default_agent = "plan";
+    model = "llama.cpp/muse-glimmer-local";
+    small_model = "llama.cpp/muse-glimmer-local";
+    autoupdate = false;
+    share = "disabled";
+    enabled_providers = [ "llama.cpp" ];
+    provider = {
+      "llama.cpp" = {
+        npm = "@ai-sdk/openai-compatible";
+        name = "Local llama.cpp";
+        options = {
+          baseURL = "http://192.168.64.1:8080/v1";
+        };
+        models = {
+          "muse-glimmer-local" = {
+            name = "Muse Glimmer (local)";
+            limit = {
+              context = 131072;
+              output = 8192;
+            };
+          };
+        };
+      };
+    };
+    permission = "allow";
+    compaction = {
+      auto = true;
+      prune = true;
+      reserved = 8192;
+    };
+  };
 
   bootstrap = pkgs.writeShellApplication {
     name = "ai-sandbox-opencode-bootstrap";
@@ -34,7 +66,9 @@ let
 
       if [ ! -e "${shareDir}/opencode.json" ]; then
         mkdir -p "${shareDir}"
-        cp "${opencodeDefaultConfig}" "${shareDir}/opencode.json"
+        # shellcheck disable=SC2016
+        config='${opencodeDefaultConfig}'
+        printf '%s' "$config" > "${shareDir}/opencode.json"
         chown ${username}:users "${shareDir}/opencode.json"
         chmod 0600 "${shareDir}/opencode.json"
       fi
