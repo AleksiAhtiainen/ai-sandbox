@@ -9,6 +9,12 @@ let
   username = readOr "/etc/ai-sandbox-username" "sandbox";
   homeDir = "/home/${username}";
 
+  ghostty = pkgs.ghostty.overrideAttrs (old: {
+    preFixup = (old.preFixup or "") + ''
+      gappsWrapperArgs+=(--set LIBGL_ALWAYS_SOFTWARE 1)
+    '';
+  });
+
   ghosttyBootstrap = pkgs.writeShellApplication {
     name = "ai-sandbox-ghostty-bootstrap";
     runtimeInputs = with pkgs; [ coreutils ];
@@ -37,7 +43,7 @@ let
   };
 in
 {
-  environment.systemPackages = [ pkgs.ghostty ];
+  environment.systemPackages = [ ghostty ];
 
   systemd.services.ai-sandbox-ghostty-bootstrap = {
     description = "Symlink ~/.config/ghostty to /mnt/share/shared-config/ghostty";
