@@ -40,6 +40,7 @@
         ./modules/dev-tools.nix
         ./modules/opencode.nix
         ./modules/tmux-neovim.nix
+        ./modules/ghostty.nix
       ];
 
       mkSpecialArgs = system: {

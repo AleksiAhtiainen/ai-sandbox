@@ -148,6 +148,7 @@ conduits between host and VM. Inventory (paths in VM view):
 | `shared-config/.gitconfig` | host | Optional VM git identity. See [Git config](#git-config). |
 | `shared-config/claude/` | VM | Claude Code state. See [Where Claude state lives](#where-claude-state-lives). |
 | `shared-config/fish_config/` | host (creates), VM (writes state) | Optional Fish config. See [Fish shell (optional)](#fish-shell-optional). |
+| `shared-config/ghostty/` | VM | Ghostty config, linked to `~/.config/ghostty` in the VM. |
 | `shared-config/.fish` | VM | One line (`on`/`off`) selecting fish as the login shell. See [Fish shell (optional)](#fish-shell-optional). |
 | `shared-config/.pop-shell` | VM | One line (`on`/`off`) toggling the Pop Shell tiling extension. See [Pop Shell tiling (optional)](#pop-shell-tiling-optional). |
 | `ai-sandbox-host/` | host | Host-writable clone of this repo; the only side that pushes to GitHub. |
