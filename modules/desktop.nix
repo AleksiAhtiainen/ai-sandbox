@@ -26,6 +26,7 @@
   in [
     pkgs.gnomeExtensions.pop-shell
     pkgs.pop-launcher
+    pkgs.wl-clipboard
     (pkgs.writeShellScriptBin "pop-shell-apply" ''
       set -e
       state=off
