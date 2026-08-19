@@ -77,6 +77,7 @@
   programs.dconf.profiles.user.databases = [
     {
       settings."org/gnome/desktop/peripherals/mouse".natural-scroll = true;
+      settings."org/gnome/desktop/screensaver".lock-enabled = false;
       settings."org/gnome/desktop/peripherals/keyboard" = {
         delay = lib.gvariant.mkUint32 250;
         repeat-interval = lib.gvariant.mkUint32 30;
