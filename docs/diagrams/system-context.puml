@@ -4,6 +4,7 @@ caption DFD3 context diagram. Optional flows and elements are labeled explicitly
 
 left to right direction
 skinparam monochrome true
+skinparam backgroundColor white
 skinparam shadowing false
 skinparam defaultTextAlignment center
 skinparam ArrowColor black
