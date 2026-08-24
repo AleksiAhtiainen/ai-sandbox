@@ -440,9 +440,8 @@ example, run these commands in the sandbox VM:
 
 ```sh
 cd /mnt/share/ai-sandbox-vm
-arch=$(uname -m)
-nix build .#packages.$arch-linux.compressedImage --impure -L
-cp -L result /mnt/share/ai-sandbox-$arch.qcow2
+nix build .#packages.$(uname -m)-linux.compressedImage --impure -L
+cp -L result /mnt/share/ai-sandbox-$(uname -m).qcow2
 ```
 
 The build creates an `aarch64-linux` image on an Apple Silicon VM and an
@@ -475,9 +474,8 @@ Use a full image when the first-boot download is not practical:
 
 ```sh
 cd /mnt/share/ai-sandbox-vm
-arch=$(uname -m)
-nix build .#packages.$arch-linux.compressedFullImage --impure -L
-cp -L result /mnt/share/ai-sandbox-full-image-$arch.qcow2
+nix build .#packages.$(uname -m)-linux.compressedFullImage --impure -L
+cp -L result /mnt/share/ai-sandbox-full-image$(uname -m)-.qcow2
 ```
 
 First boot still personalizes the username and runs `nixos-rebuild`. The large
