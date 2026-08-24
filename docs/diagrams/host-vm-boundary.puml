@@ -1,0 +1,67 @@
+@startuml host-vm-boundary
+title AI Sandbox - Host and VM Boundary DFD
+caption DFD3 level 1 diagram of UTM-mediated host/guest data paths.
+
+left to right direction
+skinparam monochrome true
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultTextAlignment center
+skinparam ArrowColor black
+hide stereotype
+skinparam rectangle {
+  BackgroundColor white
+  BorderColor black
+}
+skinparam database {
+  BackgroundColor white
+  BorderColor black
+}
+skinparam rectangle<<process>> {
+  RoundCorner 25
+}
+skinparam rectangle<<trust-boundary>> {
+  BorderStyle dashed
+  BackgroundColor transparent
+}
+
+rectangle "E1\nDeveloper / operator" as E1
+rectangle "E2\nInternet and host-network services" as E2
+
+rectangle "TB1  Host machine" as TB1 <<trust-boundary>> {
+  rectangle "P1\nUTM / QEMU" as P1 <<process>>
+  rectangle "P2\nHost Git tools" as P2 <<process>>
+  database "D1\nShared directory\n~/ai-sandbox-share" as D1
+  database "D2\nVM disk image\nqcow2" as D2
+  database "D3\nHost Git credentials\nand signing keys" as D3
+
+  rectangle "TB2  NixOS guest VM" as TB2 <<trust-boundary>> {
+    rectangle "P3\nNixOS desktop and\ndevelopment tools" as P3 <<process>>
+    rectangle "P4\n9p client and bindfs" as P4 <<process>>
+    rectangle "P5\nNetwork stack" as P5 <<process>>
+    rectangle "P6\nSPICE agent" as P6 <<process>>
+    database "D4\nGuest ext4 filesystem" as D4
+  }
+}
+
+E1 <--> P1 : F1  Keyboard, mouse, and display
+P1 <--> P6 : F2  Clipboard text\nSPICE
+P6 <--> P3 : F3  Guest clipboard contents
+
+P3 <--> P4 : F4  Reads and writes\n/mnt/share
+P4 <--> P1 : F5  9P2000.L over virtio\ntag: share
+P1 <--> D1 : F6  Host filesystem access
+
+P3 <--> D4 : F7  Guest files and application state
+D4 <--> P1 : F8  Virtual block I/O\nvirtio
+P1 <--> D2 : F9  qcow2 reads and writes
+
+P3 <--> P5 : F10  Application network traffic
+P5 <--> P1 : F11  Virtual network traffic
+P1 <--> E2 : F12  UTM Shared Network / vmnet\nInternet and host services
+
+P2 <--> D1 : F13  Review, fetch, and shared Git clones
+D3 --> P2 : F14  Authentication and commit signing
+E1 <--> P2 : F15  Review/publish commands and results
+
+@enduml

@@ -1,0 +1,60 @@
+@startuml host-local-model
+title AI Sandbox - Host-Local Model DFD
+caption DFD3 level 1 diagram of optional llama.cpp inference from the VM.
+
+left to right direction
+skinparam monochrome true
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultTextAlignment center
+skinparam ArrowColor black
+hide stereotype
+skinparam rectangle {
+  BackgroundColor white
+  BorderColor black
+}
+skinparam database {
+  BackgroundColor white
+  BorderColor black
+}
+skinparam rectangle<<process>> {
+  RoundCorner 25
+}
+skinparam rectangle<<trust-boundary>> {
+  BorderStyle dashed
+  BackgroundColor transparent
+}
+
+rectangle "E1\nDeveloper / operator" as E1
+rectangle "E2\nLAN clients\n(only if broadly bound)" as E2
+
+rectangle "TB1  Host machine" as TB1 <<trust-boundary>> {
+  rectangle "P1\nUTM / vmnet bridge" as P1 <<process>>
+  rectangle "P2\nllama.cpp server\n192.168.64.1:8080" as P2 <<process>>
+  database "D1\nGGUF model file" as D1
+  database "D2\nMultimodal projection file" as D2
+  database "D3\nHost memory / model context" as D3
+
+  rectangle "TB2  NixOS guest VM" as TB2 <<trust-boundary>> {
+    rectangle "P3\nOpenCode" as P3 <<process>>
+    rectangle "P4\nGuest network stack" as P4 <<process>>
+    database "D4\nOpenCode configuration\nbaseURL and model limits" as D4
+    database "D5\nProject workspace and context" as D5
+  }
+}
+
+E1 <--> P3 : F1  Prompts and model responses
+D4 --> P3 : F2  Provider URL, model name,\nand context/output limits
+P3 <--> D5 : F3  Context reads and source changes
+
+P3 <--> P4 : F4  OpenAI-compatible API traffic\nHTTP
+P4 <--> P1 : F5  UTM Shared Network\n192.168.64.0/24
+P1 <--> P2 : F6  Inference requests and responses\nHTTP, port 8080
+
+D1 --> P2 : F7  Model weights
+D2 --> P2 : F8  Projection data
+P2 <--> D3 : F9  Loaded weights, KV cache,\nand inference state
+
+E2 <--> P2 : F10  Inference API traffic\npossible only with LAN-reachable binding
+
+@enduml

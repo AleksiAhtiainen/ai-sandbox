@@ -1,0 +1,77 @@
+@startuml supply-chain
+title AI Sandbox - Image and Software Supply Chain DFD
+caption DFD3 level 1 diagram. Seed, first-boot, update, and publication paths are included.
+
+left to right direction
+skinparam monochrome true
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultTextAlignment center
+skinparam ArrowColor black
+hide stereotype
+skinparam rectangle {
+  BackgroundColor white
+  BorderColor black
+}
+skinparam database {
+  BackgroundColor white
+  BorderColor black
+}
+skinparam rectangle<<process>> {
+  RoundCorner 25
+}
+skinparam rectangle<<trust-boundary>> {
+  BorderStyle dashed
+  BackgroundColor transparent
+}
+
+rectangle "E1\nProject maintainer" as E1
+rectangle "E2\nGitHub repository and Actions" as E2
+rectangle "E3\nGitHub-hosted runners\nUbuntu x86_64 / ARM64" as E3
+rectangle "E4\nNix binary caches and\nupstream source hosts" as E4
+rectangle "E5\nnpm registry and\nsoftware vendors" as E5
+rectangle "E6\nSandbox user" as E6
+
+rectangle "TB1  Maintainer host" as TB1 <<trust-boundary>> {
+  rectangle "P1\nGit review, signing,\nand publishing tools" as P1 <<process>>
+  database "D1\nHost repository clone" as D1
+  database "D2\nGitHub credentials and\nsigning key" as D2
+}
+
+rectangle "TB2  Sandbox VM" as TB2 <<trust-boundary>> {
+  rectangle "P2\nNix evaluator and builder" as P2 <<process>>
+  rectangle "P3\nFirst-boot nixos-rebuild" as P3 <<process>>
+  rectangle "P4\nRuntime package launchers\n(npx and installed tools)" as P4 <<process>>
+  database "D3\nVM repository clone\nflake.nix and flake.lock" as D3
+  database "D4\nNix store and installed system" as D4
+  database "D5\nBuilt qcow2 image\nseed or private full image" as D5
+  database "D6\nEmbedded seed flake\n/etc/nixos" as D6
+}
+
+E1 <--> P1 : F1  Review and publication commands/results
+P1 <--> D1 : F2  Source changes and signed commits
+D2 --> P1 : F3  Authentication and signing material
+P1 <--> E2 : F4  Signed Git commits and repository data\nSSH or HTTPS
+
+E2 --> E3 : F5  Pinned workflow actions, source checkout,\nand build instructions
+E4 --> E3 : F6  Locked Nix inputs, sources,\nand binary substitutes - HTTPS
+E3 --> E2 : F7  Compressed aarch64/x86_64\nseed-image artifacts
+E2 --> E6 : F8  Published seed-image artifact download\nHTTPS
+
+E6 --> P3 : F9  First-boot password and console input
+D6 --> P3 : F10  Embedded flake and selected system target
+E4 --> P3 : F11  Post-seed packages and dependencies\nHTTPS
+P3 --> D4 : F12  Installed GNOME, IDEA, AI tools,\nand development environment
+
+D3 --> P2 : F13  Locked build definition
+E4 --> P2 : F14  Nix inputs, sources, and substitutes\nHTTPS with NAR hashes where applicable
+P2 --> D5 : F15  Generated and compressed qcow2
+P2 --> D4 : F16  Build outputs and Nix store paths
+D3 --> D6 : F17  Seed module configuration\nbaked into image
+
+D1 --> D3 : F18  Reviewed repository updates\nvia shared host remote
+P2 --> D3 : F19  Explicit flake.lock updates
+E5 --> P4 : F20  Runtime package download\nfor example npx package @latest
+P4 --> D4 : F21  Executed runtime dependencies and caches
+
+@enduml

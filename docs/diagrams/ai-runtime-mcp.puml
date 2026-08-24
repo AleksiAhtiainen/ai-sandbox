@@ -1,0 +1,82 @@
+@startuml ai-runtime-mcp
+title AI Sandbox - AI Runtime and MCP DFD
+caption DFD3 level 1 diagram. OpenCode and Claude Code paths are both shown.
+
+left to right direction
+skinparam monochrome true
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultTextAlignment center
+skinparam ArrowColor black
+hide stereotype
+skinparam rectangle {
+  BackgroundColor white
+  BorderColor black
+}
+skinparam database {
+  BackgroundColor white
+  BorderColor black
+}
+skinparam rectangle<<process>> {
+  RoundCorner 25
+}
+skinparam rectangle<<trust-boundary>> {
+  BorderStyle dashed
+  BackgroundColor transparent
+}
+
+rectangle "E1\nDeveloper / operator" as E1
+rectangle "E2\nCloud model provider" as E2
+rectangle "E3\nWebsites" as E3
+rectangle "E4\nHost-local model API\n(optional)" as E4
+rectangle "E5\nnpm registry" as E5
+
+rectangle "TB1  NixOS guest VM" as TB1 <<trust-boundary>> {
+  rectangle "P1\nClaude Code" as P1 <<process>>
+  rectangle "P2\nOpenCode" as P2 <<process>>
+  rectangle "P3\nShell and permitted tools" as P3 <<process>>
+  rectangle "P4\nchrome-devtools MCP server\n(npx package)" as P4 <<process>>
+  rectangle "P5\nIsolated Chromium" as P5 <<process>>
+  rectangle "P6\nIntelliJ IDEA and\nbuilt-in MCP server" as P6 <<process>>
+  rectangle "P7\nnpx package launcher" as P7 <<process>>
+
+  database "D3\nClaude MCP configuration\n~/.claude.json" as D3
+  database "D5\nIDEA settings and project data" as D5
+  database "D6\nChromium profile\n(isolated session)" as D6
+}
+
+rectangle "TB2  Host-backed shared directory" as TB2 <<trust-boundary>> {
+  database "D1\nProject workspace\n/mnt/share" as D1
+  database "D2\nClaude state, credentials,\nand private project data\nshared-config/claude" as D2
+  database "D4\nOpenCode configuration and state\nshared-config/opencode" as D4
+}
+
+E1 <--> P1 : F1  Prompts, approvals, and responses
+E1 <--> P2 : F2  Prompts, commands, and responses
+
+P1 <--> E2 : F3  Prompts, context, credentials,\nand model responses - HTTPS
+P2 <--> E2 : F4  Model API traffic, if configured\nHTTPS
+P2 <--> E4 : F5  Inference requests and responses\nOpenAI-compatible HTTP over vmnet
+
+P1 <--> P3 : F6  Tool requests and results
+P2 <--> P3 : F7  Tool requests and results\npermissions default to allow
+P3 <--> D1 : F8  Project reads and writes
+P1 <--> D1 : F9  Context and source changes
+P2 <--> D1 : F10  Context and source changes
+
+P1 <--> D2 : F11  Sessions, credentials, and state
+D3 --> P1 : F12  MCP server definitions
+P2 <--> D4 : F13  Provider configuration and state
+
+P1 <--> P4 : F14  MCP requests and results\nstdio
+E5 --> P7 : F15  Package download at launch\nHTTPS, chrome-devtools-mcp@latest
+P7 --> P4 : F16  Downloaded server code and arguments
+P4 <--> P5 : F17  Chrome DevTools Protocol
+P5 <--> E3 : F18  Browser requests and web content\nHTTP(S)
+P5 <--> D6 : F19  Browser session data
+
+P1 <--> P6 : F20  MCP requests and results\nHTTP/SSE on 127.0.0.1:64342
+P6 <--> D1 : F21  Project operations\nbrave mode: no per-call approval
+P6 <--> D5 : F22  IDE settings, indexes, and project state
+
+@enduml
