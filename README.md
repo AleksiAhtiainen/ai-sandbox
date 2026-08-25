@@ -250,7 +250,6 @@ replacement. These paths are shown from the VM:
 | `shared-config/opencode/` | VM | OpenCode configuration and state. |
 | `shared-config/tmux/` | VM | Tmux configuration. |
 | `shared-config/nvim/` | VM | Neovim configuration. |
-| `shared-config/ghostty/` | VM | Ghostty configuration. |
 | `shared-config/fish_config/` | VM | Optional Fish configuration. |
 | `shared-config/.fish` | VM | Fish login-shell state: `on` or `off`. |
 | `shared-config/.pop-shell` | VM | Pop Shell state: `on` or `off`. |
@@ -421,8 +420,8 @@ when a Nix rebuild changes the Nix store path.
 - `seedModules` contains `base`, `share`, `user`, `firstboot`, `vm`, `git`,
   and `fish`. These modules form the public seed image.
 - `postSeedModules` contains `desktop`, `spice`, `claude`, `idea`,
-  `dev-tools`, `opencode`, `tmux-neovim`, and `ghostty`. First boot installs
-  these modules.
+  `dev-tools`, `opencode`, `tmux-neovim`, and `yed`. First boot installs these
+  modules.
 
 The public seed starts at a text console. The first-boot service rebuilds the
 embedded flake at `/etc/nixos`, sets the password, and restarts into GNOME.
