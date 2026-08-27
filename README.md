@@ -16,7 +16,8 @@ It supports `aarch64-linux` and `x86_64-linux`.
 ## Security limits
 
 The VM reduces direct access to the host. The share, network, and clipboard are
-still data paths between the VM and the host.
+still data paths between the VM and the host. It does not eliminate software
+supply-chain risks in NixOS packages, binary caches, or upstream downloads.
 
 ### Shared files
 
@@ -52,6 +53,16 @@ services on the host vmnet interface.
 
 Keep untrusted code and dependencies in the VM. Do not give them access to
 host services or shared data that they do not need.
+
+### Software supply chain
+
+The system is based on NixOS. Also consider its supply chain risk management
+methods when using the system.
+
+The system uses both a NixOS release branch and the faster-moving
+`nixos-unstable-small` branch. The unstable-small branch receives less
+stabilization than a release branch, so updates can introduce newer defects or
+compromised upstream software sooner.
 
 ## Start the VM
 
@@ -178,8 +189,6 @@ To update only the unstable input, run:
 nix flake update unstable
 ```
 
-The unstable input supplies Claude Code and IntelliJ IDEA.
-
 ### Apply changes
 
 Run this command in the VM after a repository or input change:
@@ -255,7 +264,6 @@ replacement. These paths are shown from the VM:
 | `shared-config/.pop-shell` | VM | Pop Shell state: `on` or `off`. |
 | `ai-sandbox-host/` | Host | Clone that pulls from and pushes to GitHub. |
 | `ai-sandbox-vm/` | VM | Clone used by `nixos-rebuild`. |
-| `ai-sandbox-<arch>.qcow2` | Maintainer | Optional staged seed image. |
 
 The raw 9p mount is `/run/ai-sandbox-share`. A `bindfs` layer exposes it as
 `/mnt/share`. The layer maps file ownership to VM user ID `1000` and group ID
@@ -395,7 +403,7 @@ this command in the VM to enable it:
 pop-shell-on
 ```
 
-On Wayland, log out and log in after the first enable operation. Run
+Log out and log in after the first enable operation. Run
 `pop-shell-off` to disable it.
 
 Key bindings:
@@ -415,13 +423,8 @@ when a Nix rebuild changes the Nix store path.
 
 ## Image architecture
 
-`flake.nix` separates the image into two module groups.
-
-- `seedModules` contains `base`, `share`, `user`, `firstboot`, `vm`, `git`,
-  and `fish`. These modules form the public seed image.
-- `postSeedModules` contains `desktop`, `spice`, `claude`, `idea`,
-  `dev-tools`, `opencode`, `tmux-neovim`, and `yed`. First boot installs these
-  modules.
+`flake.nix` separates the image into `seedModules`, which form the public seed
+image, and `postSeedModules`, which first boot installs.
 
 The public seed starts at a text console. The first-boot service rebuilds the
 embedded flake at `/etc/nixos`, sets the password, and restarts into GNOME.
