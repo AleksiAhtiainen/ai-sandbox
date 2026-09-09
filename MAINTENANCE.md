@@ -170,8 +170,8 @@ username during a seed build.
 
 ### Build with GitHub Actions
 
-`.github/workflows/build_seed_images.yml` builds both seed images daily at
-03:00 UTC. Start it manually from the Actions page or with:
+`.github/workflows/build_seed_images.yml` builds both seed images weekly on
+Sunday at 03:00 UTC. Start it manually from the Actions page or with:
 
 ```sh
 gh workflow run "Build seed images"
