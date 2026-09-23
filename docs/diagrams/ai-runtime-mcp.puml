@@ -48,7 +48,7 @@ rectangle "TB1  NixOS guest VM" as TB1 <<trust-boundary>> {
 rectangle "TB2  Host-backed shared directory" as TB2 <<trust-boundary>> {
   database "D1\nProject workspace\n/mnt/share" as D1
   database "D2\nClaude state, credentials,\nand private project data\nshared-config/claude" as D2
-  database "D4\nOpenCode configuration and state\nshared-config/opencode" as D4
+  database "D4\nOpenCode configuration, MCP definitions,\nand state\nshared-config/opencode" as D4
 }
 
 E1 <--> P1 : F1  Prompts, approvals, and responses
@@ -66,7 +66,7 @@ P2 <--> D1 : F10  Context and source changes
 
 P1 <--> D2 : F11  Sessions, credentials, and state
 D3 --> P1 : F12  MCP server definitions
-P2 <--> D4 : F13  Provider configuration and state
+P2 <--> D4 : F13  Provider and MCP configuration, and state
 
 P1 <--> P4 : F14  MCP requests and results\nstdio
 E5 --> P7 : F15  Package download at launch\nHTTPS, chrome-devtools-mcp@latest
@@ -78,5 +78,8 @@ P5 <--> D6 : F19  Browser session data
 P1 <--> P6 : F20  MCP requests and results\nHTTP/SSE on 127.0.0.1:64342
 P6 <--> D1 : F21  Project operations\nbrave mode: no per-call approval
 P6 <--> D5 : F22  IDE settings, indexes, and project state
+
+P2 <--> P4 : F23  MCP requests and results\nstdio
+P2 <--> P6 : F24  MCP requests and results\nHTTP/SSE on 127.0.0.1:64342
 
 @enduml

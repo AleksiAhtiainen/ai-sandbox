@@ -50,7 +50,9 @@ on the host vmnet interface.
 - OpenCode permits tool use by default. Session sharing and automatic updates
   are disabled.
 - The IntelliJ IDEA MCP server uses brave mode and does not request approval
-  for each tool call.
+  for each tool call from Claude Code or OpenCode.
+- Claude Code and OpenCode launch the Chromium MCP server through `npx`. Its
+  `@latest` package is downloaded at runtime and is not pinned by `flake.lock`.
 - GNOME screen locking is disabled.
 - The VM has no SSH server.
 

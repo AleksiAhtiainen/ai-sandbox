@@ -162,30 +162,37 @@ defaults are:
 | Context limit | `131072` |
 | Output limit | `8192` |
 
-Edit `baseURL` if the vmnet IP differs. OpenCode does not overwrite an existing
-configuration file.
+Edit `baseURL` if the vmnet IP differs. OpenCode preserves existing settings
+when adding the default MCP entries described below.
 
-## Claude Code And MCP
+## AI Tools And MCP
 
 [Claude Code](https://docs.claude.com/en/docs/claude-code) is available as
 `claude` after first boot.
 
 `~/.claude/` links to `/mnt/share/shared-config/claude/`, so its contents
 survive VM replacement. `~/.claude.json` stays on the VM disk and does not.
-The `ai-sandbox-claude-bootstrap` service adds these MCP entries on each boot:
+The `ai-sandbox-claude-bootstrap` and `ai-sandbox-opencode-bootstrap` services
+add these MCP entries for Claude Code and OpenCode on each boot:
 
 | Name | Function |
 | --- | --- |
 | `chrome-devtools` | Runs the MCP server in isolated Chromium. |
 | `idea` | Connects to IntelliJ IDEA at `http://127.0.0.1:64342/sse`. |
 
-Existing entries are not changed. If you remove a seeded entry, it returns on
-the next boot. Add `--headless` to the Chrome entry to hide its browser window.
+Existing entries with these names are not changed. If you remove a seeded
+entry, it returns on the next boot. Add `--headless` to the Chrome entry to hide
+its browser window.
+
+OpenCode stores its MCP entries in
+`/mnt/share/shared-config/opencode/opencode.json`, which persists across VM
+replacement. Quit and restart OpenCode after changing this file. Use
+`opencode mcp list` to inspect the configured servers.
 
 The `ai-sandbox-idea-bootstrap` service enables the IDEA MCP server and brave
 mode on a new VM. Later changes in IDEA persist across restarts but not VM
 replacement. If IDEA uses a port other than `64342`, update the `idea` entry in
-`~/.claude.json`.
+`~/.claude.json` and OpenCode's `opencode.json`.
 
 ## Optional Configuration
 

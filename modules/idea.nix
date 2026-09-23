@@ -16,8 +16,8 @@ let
     + lib.concatStringsSep "." (lib.take 2 (lib.splitVersion unstablePkgs.jetbrains.idea.version));
 
   # Enables IDEA's built-in MCP server (Settings | Tools | MCP Server) so
-  # the idea MCP entry seeded into Claude Code (see claude.nix) works on
-  # a fresh VM without flipping it on in the IDE. Brave mode lets MCP
+  # the idea MCP entries seeded into Claude Code and OpenCode work on a
+  # fresh VM without flipping it on in the IDE. Brave mode lets MCP
   # tool calls run without per-call confirmation dialogs in IDEA.
   mcpServerXml = pkgs.writeText "idea-mcpServer.xml" ''
     <application>
