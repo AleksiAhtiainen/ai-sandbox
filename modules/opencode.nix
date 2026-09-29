@@ -10,7 +10,8 @@ let
   homeDir = "/home/${username}";
 
   shareDir = "/mnt/share/shared-config/opencode";
-  homeConfig = "${homeDir}/.config/opencode";
+  homeConfigDir = "${homeDir}/.config/opencode";
+  homeConfig = "${homeConfigDir}/opencode.json";
 
   # Entries already present in opencode.json win over these seeds.
   seededMcpServers = {
@@ -77,14 +78,14 @@ let
       install -d -o ${username} -g users -m 0755 /mnt/share/shared-config
       install -d -o ${username} -g users -m 0700 "${shareDir}"
 
-      if [ -e "${homeConfig}" ] && [ ! -L "${homeConfig}" ]; then
-        mkdir -p "${shareDir}"
-        cp -an "${homeConfig}"/. "${shareDir}"/ 2>/dev/null || true
-        rm -rf "${homeConfig}"
+      if [ -L "${homeConfigDir}" ]; then
+        if [ "$(readlink "${homeConfigDir}")" != "${shareDir}" ]; then
+          echo "Refusing to replace unexpected symlink: ${homeConfigDir}" >&2
+          exit 1
+        fi
+        rm "${homeConfigDir}"
       fi
-
-      ln -sfn "${shareDir}" "${homeConfig}"
-      chown -h ${username}:users "${homeConfig}"
+      install -d -o ${username} -g users -m 0700 "${homeConfigDir}"
 
       cfg="${shareDir}/opencode.json"
       seed='${builtins.toJSON seededMcpServers}'
@@ -99,6 +100,14 @@ let
       fi
       install -o ${username} -g users -m 0600 "$tmp" "$cfg"
       rm -f "$tmp"
+
+      if [ -e "${homeConfig}" ] && ! cmp -s "${homeConfig}" "$cfg"; then
+        backup="$(mktemp "${homeConfig}.vm-local-backup.XXXXXX")"
+        install -o ${username} -g users -m 0600 "${homeConfig}" "$backup"
+      fi
+      rm -f "${homeConfig}"
+      ln -s "$cfg" "${homeConfig}"
+      chown -h ${username}:users "${homeConfig}"
     '';
   };
 in
@@ -108,7 +117,7 @@ in
   ];
 
   systemd.services.ai-sandbox-opencode-bootstrap = {
-    description = "Bootstrap opencode config on /mnt/share/shared-config";
+    description = "Bootstrap shared OpenCode configuration";
     after = [ "mnt-share.mount" ];
     wants = [ "mnt-share.mount" ];
     wantedBy = [ "multi-user.target" ];

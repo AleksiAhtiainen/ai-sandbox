@@ -103,7 +103,7 @@ replacement. Paths below are shown from the VM:
 | `shared-config/.host-username` | Host | Required VM username. |
 | `shared-config/.gitconfig` | Host | Optional Git identity for the VM. |
 | `shared-config/claude/` | VM | Claude Code state and login data. |
-| `shared-config/opencode/` | VM | OpenCode configuration and state. |
+| `shared-config/opencode/opencode.json` | VM | OpenCode configuration. |
 | `shared-config/tmux/` | VM | Tmux configuration. |
 | `shared-config/nvim/` | VM | Neovim configuration. |
 | `shared-config/fish_config/` | VM | Optional Fish configuration. |
@@ -165,6 +165,10 @@ defaults are:
 Edit `baseURL` if the vmnet IP differs. OpenCode preserves existing settings
 when adding the default MCP entries described below.
 
+`~/.config/opencode` is a normal directory on the VM disk. Only its
+`opencode.json` file links to the shared file, so OpenCode's downloaded packages,
+plugins, and other directory contents remain on the VM disk.
+
 ## AI Tools And MCP
 
 [Claude Code](https://docs.claude.com/en/docs/claude-code) is available as
@@ -186,8 +190,9 @@ its browser window.
 
 OpenCode stores its MCP entries in
 `/mnt/share/shared-config/opencode/opencode.json`, which persists across VM
-replacement. Quit and restart OpenCode after changing this file. Use
-`opencode mcp list` to inspect the configured servers.
+replacement and is linked from `~/.config/opencode/opencode.json`. Quit and
+restart OpenCode after changing this file. Use `opencode mcp list` to inspect
+the configured servers.
 
 The `ai-sandbox-idea-bootstrap` service enables the IDEA MCP server and brave
 mode on a new VM. Later changes in IDEA persist across restarts but not VM
