@@ -77,6 +77,31 @@ nix flake update unstable
 
 Review the resulting `flake.lock` changes before rebuilding.
 
+### Clean old boot files
+
+The EFI system partition is mounted at `/boot`. Check its use before an update:
+
+```sh
+df -h /boot
+sudo nix-env --profile /nix/var/nix/profiles/system --list-generations
+```
+
+If `/boot` is short on space, remove old system generations, regenerate the
+GRUB configuration so unreferenced kernels and initrds are removed from
+`/boot/kernels`, and then collect the now-unreferenced Nix store paths:
+
+```sh
+sudo nix-env --profile /nix/var/nix/profiles/system --delete-generations old
+sudo /run/current-system/bin/switch-to-configuration boot
+sudo nix-collect-garbage
+df -h /boot
+```
+
+This preserves the currently running generation. Reboot and verify the updated
+system before deleting it later. Do not delete files from `/boot/kernels`
+manually; the bootloader configuration and the files it references must remain
+in sync.
+
 ### Apply and test changes
 
 Run in the VM after a repository or input change:
